@@ -11,6 +11,7 @@ use std::fmt::Display;
 use std::fmt::Formatter;
 use std::str::FromStr;
 use structopt::StructOpt;
+use git_version::git_version;
 
 mod calc;
 mod card;
@@ -137,8 +138,10 @@ impl Display for Hand {
     }
 }
 
+const VERSION: &str = git_version!();
+
 #[derive(StructOpt, Debug)]
-#[structopt(name = "odd")]
+#[structopt(name = "odd", version = VERSION)]
 struct Opt {
     #[structopt(required = true, number_of_values = 2, multiple = true)]
     hole_cards: Vec<Card>,
