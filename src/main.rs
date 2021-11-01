@@ -142,15 +142,25 @@ const VERSION: &str = git_version!();
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "odd", version = VERSION)]
+/// texas hold'em poker odds simulator
 struct Opt {
+    /// Pairs of hole cards for each (known) player; e.g. As Kd 5h Tc
     #[structopt(required = true, number_of_values = 2, multiple = true)]
     hole_cards: Vec<Card>,
+
+    /// Community cards comprising the flop, turn, and river; e.g. 2s 3h 4c 5d 6s
     #[structopt(short, long, min_values = 3, max_values = 5)]
     board: Vec<Card>,
+
+    /// Number of additional players with unknown hole cards
     #[structopt(short, long, default_value = "0")]
     opponents: usize,
+
+    /// RNG seed used for generating permutations of the deck
     #[structopt(short, long, default_value = "1")]
     seed: u128,
+
+    /// Number of deck permutations to generate
     #[structopt(short, long, default_value = "1000000")]
     permutations: usize,
 }
