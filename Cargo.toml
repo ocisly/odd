@@ -1,0 +1,15 @@
+[package]
+name = "odd"
+version = "0.1.0"
+edition = "2021"
+
+[profile.release]
+debug = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+itertools = "0.10.1"
+oorandom = "11.1.3"
+rayon = "1.5.1"
+structopt = "0.3.25"
