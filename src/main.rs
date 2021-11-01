@@ -3,6 +3,7 @@ use card::Rank::*;
 use card::Suit::*;
 use card::{Card, Rank, Suit};
 use deck::Deck;
+use git_version::git_version;
 use hand::HandType::*;
 use hand::{hands, Hand, HandType};
 use itertools::Itertools;
@@ -11,7 +12,6 @@ use std::fmt::Display;
 use std::fmt::Formatter;
 use std::str::FromStr;
 use structopt::StructOpt;
-use git_version::git_version;
 
 mod calc;
 mod card;
@@ -36,8 +36,6 @@ fn main() {
         }
         println!();
     }
-
-    println!();
 
     let flop = opt.board.get(..3);
     let turn = opt.board.get(3..4);
@@ -142,7 +140,12 @@ const VERSION: &str = git_version!();
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "odd", version = VERSION)]
-/// texas hold'em poker odds simulator
+/// Texas hold'em poker odds simulator
+///
+/// When all the player's hole cards and all five community cards are known, odd detects what hand
+/// each player holds and determines the winners. Otherwise, odd estimates the odds of winning for
+/// each player by generating a configurable number of random deck shuffles to simulate a range of
+/// possible scenarios.
 struct Opt {
     /// Pairs of hole cards for each (known) player; e.g. As Kd 5h Tc
     #[structopt(required = true, number_of_values = 2, multiple = true)]
