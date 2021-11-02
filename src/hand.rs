@@ -211,15 +211,15 @@ pub fn gen_straight_flushes() -> impl Iterator<Item = Vec<Card>> {
 #[cfg(test)]
 fn shuffled<T: Copy>(things: &[T]) -> impl Iterator<Item = T> + '_ {
     let mut things = things.to_owned();
-    let mut rng = oorandom::Rand64::new(1);
-    let n = things.len() as u64;
+    let rng = fastrand::Rng::with_seed(1);
+    let n = things.len();
     // for i from 0 to n−2 do
     (0..n).map(move |i| {
         // j ← random integer such that i ≤ j < n
-        let j = rng.rand_range(i..n);
+        let j = rng.usize(i..n);
         // exchange a[i] and a[j]
-        things.swap(i as usize, j as usize);
-        things[i as usize]
+        things.swap(i, j);
+        things[i]
     })
 }
 

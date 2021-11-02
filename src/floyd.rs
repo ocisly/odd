@@ -1,9 +1,14 @@
 use std::collections::VecDeque;
 
-pub fn permutations<T: Clone, F>(k: usize, deck: Vec<T>, mut rng: F) -> impl Iterator<Item = Vec<T>>
-where
-    F: FnMut(std::ops::Range<u64>) -> u64,
-{
+pub trait RngTrait<T> {
+    fn generate(&mut self, range: impl std::ops::RangeBounds<T>) -> T;
+}
+
+pub fn permutations<T: Clone>(
+    k: usize,
+    deck: Vec<T>,
+    mut rng: impl RngTrait<usize>,
+) -> impl Iterator<Item = Vec<T>> {
     // Robert Floyd's Algorithm: sample a single random permutation
     // https://dl.acm.org/doi/pdf/10.1145/30401.315746
     //
@@ -19,7 +24,7 @@ where
     std::iter::from_fn(move || {
         result.clear();
         for j in (n - k)..n {
-            let t = rng(0..j as u64 + 1) as usize;
+            let t = rng.generate(0..j + 1);
             if let Some(i) = result.iter().position(|x| *x == t) {
                 result.insert(i + 1, j);
             } else {
@@ -34,8 +39,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fastrand::Rng;
     use itertools::Itertools;
-    use oorandom::Rand64;
 
     fn mean(data: &[usize]) -> f64 {
         // rust cookbook
@@ -64,12 +69,12 @@ mod tests {
     #[test]
     fn test_permutations_are_uniformly_distributed() {
         let n = 1_000_000;
-        let threshold = 1.0 / 100.0;
+        let threshold = 1.0 / 250.0;
 
         for seed in [0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144] {
             let vec = vec!["a", "b", "c"];
-            let mut rng = Rand64::new(seed);
-            let result = permutations(2, vec, |range| rng.rand_range(range))
+            let rng = Rng::with_seed(seed);
+            let result = permutations(2, vec, rng)
                 .take(n)
                 .map(|combo| combo.join(","))
                 .counts()
@@ -91,8 +96,8 @@ mod tests {
     #[test]
     fn test_permutations_n_3_k_2() {
         let vec = vec!["a", "b", "c"];
-        let mut rng = Rand64::new(1);
-        let result = permutations(2, vec, |range| rng.rand_range(range))
+        let rng = Rng::with_seed(1);
+        let result = permutations(2, vec, rng)
             .take(100)
             .map(|combo| {
                 assert_eq!(2, combo.len());

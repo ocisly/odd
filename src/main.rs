@@ -3,11 +3,11 @@ use card::Rank::*;
 use card::Suit::*;
 use card::{Card, Rank, Suit};
 use deck::Deck;
+use fastrand::Rng;
 use git_version::git_version;
 use hand::HandType::*;
 use hand::{hands, Hand, HandType};
 use itertools::Itertools;
-use oorandom::Rand64;
 use std::fmt::Display;
 use std::fmt::Formatter;
 use std::str::FromStr;
@@ -18,6 +18,12 @@ mod card;
 mod deck;
 mod floyd;
 mod hand;
+
+impl floyd::RngTrait<usize> for Rng {
+    fn generate(&mut self, range: impl std::ops::RangeBounds<usize>) -> usize {
+        return self.usize(range);
+    }
+}
 
 fn main() {
     let opt = Opt::from_args();
@@ -75,14 +81,14 @@ fn main() {
             println!();
         }
     } else {
-        let mut rng = Rand64::new(opt.seed);
+        let rng = Rng::with_seed(opt.seed);
         for (i, odds) in odds(
             opt.opponents,
             players,
             opt.board,
             deck,
             opt.permutations,
-            |bounds| rng.rand_range(bounds),
+            rng,
         )
         .into_iter()
         .enumerate()
@@ -161,7 +167,7 @@ struct Opt {
 
     /// RNG seed used for generating permutations of the deck
     #[structopt(short, long, default_value = "1")]
-    seed: u128,
+    seed: u64,
 
     /// Number of deck permutations to generate
     #[structopt(short, long, default_value = "1000000")]

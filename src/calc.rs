@@ -1,6 +1,7 @@
 use crate::card::Card;
 use crate::deck::Deck;
 use crate::floyd::permutations;
+use crate::floyd::RngTrait;
 use crate::hand::{combine_cards, hands, Hand};
 use itertools::Itertools;
 use rayon::prelude::*;
@@ -8,16 +9,15 @@ use rayon::prelude::*;
 const HOLE_CARDS_PER_PLAYER: usize = 2;
 const BOARD_LENGTH: usize = 5;
 
-pub fn odds<F>(
+pub fn odds(
     opponents: usize,
     players: Vec<Vec<Card>>,
     board: Vec<Card>,
     deck: Deck,
     desired_samples: usize,
-    rng: F,
+    rng: impl RngTrait<usize> + Send,
 ) -> Odds
 where
-    F: FnMut(std::ops::Range<u64>) -> u64 + Send,
 {
     let unknown_hole_cards = HOLE_CARDS_PER_PLAYER * opponents;
     let unknown_board_cards = BOARD_LENGTH - board.len();
