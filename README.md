@@ -34,8 +34,8 @@ river: 9♥️
 
 43 cards remain.
 
-player 1 has Full House, As full of 9s: A♦️ A♥️ A♠️ 9♣️ 9♥️ (winner)
-player 2 has Full House, 8s full of As: 8♥️ 8♠️ 8♣️ A♥️ A♠️ (lost)
+player 1 has Full House, Aces full of Nines: A♦️ A♥️ A♠️ 9♣️ 9♥️ (winner)
+player 2 has Full House, Eights full of Aces: 8♥️ 8♠️ 8♣️ A♥️ A♠️ (lost)
 ```
 
 Otherwise, `odd` estimates the odds of winning for each player by generating a

@@ -19,12 +19,6 @@ mod deck;
 mod floyd;
 mod hand;
 
-impl floyd::RngTrait<usize> for Rng {
-    fn generate(&mut self, range: impl std::ops::RangeBounds<usize>) -> usize {
-        return self.usize(range);
-    }
-}
-
 fn main() {
     let opt = Opt::from_args();
     let players = opt
@@ -104,6 +98,12 @@ fn main() {
     }
 }
 
+impl floyd::RngTrait<usize> for Rng {
+    fn generate(&mut self, range: impl std::ops::RangeBounds<usize>) -> usize {
+        return self.usize(range);
+    }
+}
+
 impl Display for HandType {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), std::fmt::Error> {
         write!(
@@ -127,18 +127,78 @@ impl Display for HandType {
 impl Display for Hand {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), std::fmt::Error> {
         write!(fmt, "{}, ", self.hand_type)?;
-        let high = self.cards[0];
+        let high = self.cards[0].rank;
         match self.hand_type {
-            StraightFlush => write!(fmt, "{} high", high.rank),
-            FourOfAKind => write!(fmt, "{}s", high.rank),
-            FullHouse => write!(fmt, "{}s full of {}s", high.rank, self.cards[3].rank),
-            Flush => write!(fmt, "{} high", high.rank),
-            Straight => write!(fmt, "{} high", high.rank),
-            ThreeOfAKind => write!(fmt, "{}s", high.rank),
-            TwoPair => write!(fmt, "{}s and {}s", high.rank, self.cards[2].rank),
-            Pair => write!(fmt, "{}s", high.rank),
-            HighCard => write!(fmt, "{}", high.rank),
+            StraightFlush => write!(fmt, "{} high", VerboseRank(high)),
+            FourOfAKind => write!(fmt, "{}s", VerboseRank(high)),
+            FullHouse => write!(
+                fmt,
+                "{} full of {}",
+                PluralRank(high),
+                PluralRank(self.cards[3].rank)
+            ),
+            Flush => write!(fmt, "{} high", VerboseRank(high)),
+            Straight => write!(fmt, "{} high", VerboseRank(high)),
+            ThreeOfAKind => write!(fmt, "{}", PluralRank(high)),
+            TwoPair => write!(
+                fmt,
+                "{} and {}",
+                PluralRank(high),
+                PluralRank(self.cards[2].rank)
+            ),
+            Pair => write!(fmt, "{}", PluralRank(high)),
+            HighCard => write!(fmt, "{}", VerboseRank(high)),
         }
+    }
+}
+
+struct VerboseRank(Rank);
+impl Display for VerboseRank {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), std::fmt::Error> {
+        write!(
+            fmt,
+            "{}",
+            match self.0 {
+                Deuce => "Deuce",
+                Trey => "Trey",
+                Four => "Four",
+                Five => "Five",
+                Six => "Six",
+                Seven => "Seven",
+                Eight => "Eight",
+                Nine => "Nine",
+                Ten => "Ten",
+                Jack => "Jack",
+                Queen => "Queen",
+                King => "King",
+                Ace => "Ace",
+            }
+        )
+    }
+}
+
+struct PluralRank(Rank);
+impl Display for PluralRank {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), std::fmt::Error> {
+        write!(
+            fmt,
+            "{}",
+            match self.0 {
+                Deuce => "Deuces",
+                Trey => "Treys",
+                Four => "Fours",
+                Five => "Fives",
+                Six => "Sixes",
+                Seven => "Sevens",
+                Eight => "Eights",
+                Nine => "Nines",
+                Ten => "Tens",
+                Jack => "Jacks",
+                Queen => "Queens",
+                King => "Kings",
+                Ace => "Aces",
+            }
+        )
     }
 }
 
