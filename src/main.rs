@@ -148,7 +148,7 @@ const VERSION: &str = git_version!();
 #[structopt(name = "odd", version = VERSION)]
 /// Texas hold'em poker odds simulator
 ///
-/// When all the player's hole cards and all five community cards are known, odd detects what hand
+/// When all the players' hole cards and all five community cards are known, odd detects what hand
 /// each player holds and determines the winners. Otherwise, odd estimates the odds of winning for
 /// each player by generating a configurable number of random deck shuffles to simulate a range of
 /// possible scenarios.
