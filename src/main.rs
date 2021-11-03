@@ -61,13 +61,13 @@ fn main() {
 
     if opt.board.len() == 5 && opt.opponents == 0 {
         let hands = hands(players, opt.board);
-        let outcomes = outcomes(&hands);
-        for (i, (hand, outcome)) in hands.iter().zip(outcomes).enumerate() {
-            print!("player {} has {}: ", i + 1, hand);
-            for card in hand.cards {
+        let outcomes = outcomes(hands);
+        for (i, outcome) in outcomes.enumerate() {
+            print!("player {} has {}: ", i + 1, outcome.hand);
+            for card in outcome.hand.cards {
                 print!("{} ", card);
             }
-            match outcome {
+            match outcome.outcome {
                 Outcome::Win => print!("(winner)"),
                 Outcome::Tie => print!("(tie)"),
                 Outcome::Loss => print!("(lost)"),
@@ -94,33 +94,37 @@ fn main() {
                 odds.tie_percent(),
                 odds.loss_percent(),
             );
+            if !opt.distribution {
+                continue;
+            }
+            for (hand_type, percent) in odds.distribution() {
+                println!("{:20}: {:5.2}%", hand_type, percent);
+            }
+            println!();
         }
     }
 }
 
-impl floyd::RngTrait<usize> for Rng {
+impl floyd::Rng<usize> for Rng {
     fn generate(&mut self, range: impl std::ops::RangeBounds<usize>) -> usize {
-        return self.usize(range);
+        self.usize(range)
     }
 }
 
 impl Display for HandType {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), std::fmt::Error> {
-        write!(
-            fmt,
-            "{}",
-            match self {
-                StraightFlush => "Straight Flush",
-                FourOfAKind => "Four of a Kind",
-                FullHouse => "Full House",
-                Flush => "Flush",
-                Straight => "Straight",
-                ThreeOfAKind => "Three of a Kind",
-                TwoPair => "Two Pair",
-                Pair => "Pair",
-                HighCard => "High Card",
-            }
-        )
+        match self {
+            StraightFlush => "Straight Flush",
+            FourOfAKind => "Four of a Kind",
+            FullHouse => "Full House",
+            Flush => "Flush",
+            Straight => "Straight",
+            ThreeOfAKind => "Three of a Kind",
+            TwoPair => "Two Pair",
+            Pair => "Pair",
+            HighCard => "High Card",
+        }
+        .fmt(fmt)
     }
 }
 
@@ -155,50 +159,44 @@ impl Display for Hand {
 struct VerboseRank(Rank);
 impl Display for VerboseRank {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), std::fmt::Error> {
-        write!(
-            fmt,
-            "{}",
-            match self.0 {
-                Deuce => "Deuce",
-                Trey => "Trey",
-                Four => "Four",
-                Five => "Five",
-                Six => "Six",
-                Seven => "Seven",
-                Eight => "Eight",
-                Nine => "Nine",
-                Ten => "Ten",
-                Jack => "Jack",
-                Queen => "Queen",
-                King => "King",
-                Ace => "Ace",
-            }
-        )
+        match self.0 {
+            Deuce => "Deuce",
+            Trey => "Trey",
+            Four => "Four",
+            Five => "Five",
+            Six => "Six",
+            Seven => "Seven",
+            Eight => "Eight",
+            Nine => "Nine",
+            Ten => "Ten",
+            Jack => "Jack",
+            Queen => "Queen",
+            King => "King",
+            Ace => "Ace",
+        }
+        .fmt(fmt)
     }
 }
 
 struct PluralRank(Rank);
 impl Display for PluralRank {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), std::fmt::Error> {
-        write!(
-            fmt,
-            "{}",
-            match self.0 {
-                Deuce => "Deuces",
-                Trey => "Treys",
-                Four => "Fours",
-                Five => "Fives",
-                Six => "Sixes",
-                Seven => "Sevens",
-                Eight => "Eights",
-                Nine => "Nines",
-                Ten => "Tens",
-                Jack => "Jacks",
-                Queen => "Queens",
-                King => "Kings",
-                Ace => "Aces",
-            }
-        )
+        match self.0 {
+            Deuce => "Deuces",
+            Trey => "Treys",
+            Four => "Fours",
+            Five => "Fives",
+            Six => "Sixes",
+            Seven => "Sevens",
+            Eight => "Eights",
+            Nine => "Nines",
+            Ten => "Tens",
+            Jack => "Jacks",
+            Queen => "Queens",
+            King => "Kings",
+            Ace => "Aces",
+        }
+        .fmt(fmt)
     }
 }
 
@@ -232,6 +230,10 @@ struct Opt {
     /// Number of deck permutations to generate
     #[structopt(short, long, default_value = "1000000")]
     permutations: usize,
+
+    /// Whether to include hand distribution in the output
+    #[structopt(short, long)]
+    distribution: bool,
 }
 
 impl FromStr for Card {
@@ -275,25 +277,22 @@ impl FromStr for Rank {
 
 impl Display for Rank {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), std::fmt::Error> {
-        write!(
-            fmt,
-            "{}",
-            match self {
-                Deuce => "2",
-                Trey => "3",
-                Four => "4",
-                Five => "5",
-                Six => "6",
-                Seven => "7",
-                Eight => "8",
-                Nine => "9",
-                Ten => "T",
-                Jack => "J",
-                Queen => "Q",
-                King => "K",
-                Ace => "A",
-            }
-        )
+        match self {
+            Deuce => "2",
+            Trey => "3",
+            Four => "4",
+            Five => "5",
+            Six => "6",
+            Seven => "7",
+            Eight => "8",
+            Nine => "9",
+            Ten => "T",
+            Jack => "J",
+            Queen => "Q",
+            King => "K",
+            Ace => "A",
+        }
+        .fmt(fmt)
     }
 }
 
@@ -313,16 +312,13 @@ impl FromStr for Suit {
 
 impl Display for Suit {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), std::fmt::Error> {
-        write!(
-            fmt,
-            "{}",
-            match self {
-                Hearts => "♥️",
-                Clubs => "♣️",
-                Spades => "♠️",
-                Diamonds => "♦️",
-            }
-        )
+        match self {
+            Hearts => "♥️",
+            Clubs => "♣️",
+            Spades => "♠️",
+            Diamonds => "♦️",
+        }
+        .fmt(fmt)
     }
 }
 

@@ -72,3 +72,28 @@ player 1 was dealt: A♠️ A♥️
 player 1: win 82.10%, tie  0.54%, loss 17.36%
 player 2: win 17.36%, tie  0.54%, loss 82.10%
 ```
+
+Optionally, `odd` can be instructed to output the distribution of possible
+outcomes for each player:
+
+```sh
+odd Ad Ks 8h 8s --board 8c Ah As 9c --distribution
+```
+
+```
+player 1 was dealt: A♦️ K♠️
+player 2 was dealt: 8♥️ 8♠️
+flop: 8♣️ A♥️ A♠️
+turn: 9♣️
+
+44 cards remain.
+
+player 1: win 15.85%, tie  0.00%, loss 84.15%
+Three of a Kind     : 81.88%
+Full House          : 15.86%
+Four of a Kind      :  2.26%
+
+player 2: win 84.15%, tie  0.00%, loss 15.85%
+Full House          : 97.73%
+Four of a Kind      :  2.27%
+```

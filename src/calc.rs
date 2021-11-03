@@ -1,10 +1,13 @@
 use crate::card::Card;
 use crate::deck::Deck;
 use crate::floyd::permutations;
-use crate::floyd::RngTrait;
-use crate::hand::{combine_cards, hands, Hand};
+use crate::floyd::Rng;
+use crate::hand::{combine_cards, hands, Hand, HandType};
 use itertools::Itertools;
 use rayon::prelude::*;
+use std::cmp::Reverse;
+use std::collections::HashMap;
+use Outcome::*;
 
 const HOLE_CARDS_PER_PLAYER: usize = 2;
 const BOARD_LENGTH: usize = 5;
@@ -15,7 +18,7 @@ pub fn odds(
     board: Vec<Card>,
     deck: Deck,
     desired_samples: usize,
-    rng: impl RngTrait<usize> + Send,
+    rng: impl Rng<usize> + Send,
 ) -> Odds
 where
 {
@@ -35,7 +38,7 @@ where
 
             let all_players = combine_players(&[&players, &extra_players]);
             let community_cards = combine_cards(&[&board, extra_board]);
-            hands(all_players, community_cards)
+            outcomes(hands(all_players, community_cards))
         })
         .fold(new_odds, Odds::update)
         .reduce(new_odds, Odds::merge)
@@ -45,20 +48,23 @@ fn combine_players(players: &[&[Vec<Card>]]) -> Vec<Vec<Card>> {
     players.iter().copied().flatten().cloned().collect_vec()
 }
 
-pub fn outcomes(hands: &[Hand]) -> impl Iterator<Item = &Outcome> {
-    let winners = winners(hands);
-    hands.iter().map(move |hand| match *winners {
-        [winner] if winner == hand => &Outcome::Win,
-        _ if winners.contains(&hand) => &Outcome::Tie,
-        _ => &Outcome::Loss,
+pub fn outcomes(hands: Vec<Hand>) -> impl Iterator<Item = HandOutcome> {
+    let max = hands.iter().max().unwrap().clone();
+    let n_winners = hands.iter().filter(|x| **x == max).count();
+    let win = if n_winners == 1 { Win } else { Tie };
+
+    hands.into_iter().map(move |hand| HandOutcome {
+        outcome: if hand == max { win } else { Loss },
+        hand,
     })
 }
 
-fn winners(hands: &[Hand]) -> Vec<&Hand> {
-    let max = hands.iter().max();
-    hands.iter().filter(|x| Some(x) == max.as_ref()).collect()
+pub struct HandOutcome {
+    pub outcome: Outcome,
+    pub hand: Hand,
 }
 
+#[derive(Clone, Copy, PartialEq)]
 pub enum Outcome {
     Win,
     Tie,
@@ -71,9 +77,9 @@ impl Odds {
     fn new(num_players: usize) -> Self {
         Self(vec![HandOdds::default(); num_players])
     }
-    fn update(self, hands: Vec<Hand>) -> Self {
+    fn update(self, outcomes: impl Iterator<Item = HandOutcome>) -> Self {
         Self(
-            outcomes(&hands)
+            outcomes
                 .zip(self.0)
                 .map(|(outcome, odds)| odds.update(outcome))
                 .collect(),
@@ -85,7 +91,7 @@ impl Odds {
             self.0
                 .into_iter()
                 .zip(other.0)
-                .map(|(odds1, odds2)| odds1.merge(&odds2))
+                .map(|(odds1, odds2)| odds1.merge(odds2))
                 .collect(),
         )
     }
@@ -105,22 +111,27 @@ pub struct HandOdds {
     wins: u64,
     ties: u64,
     losses: u64,
+    distribution: HashMap<HandType, u64>,
 }
 
 impl HandOdds {
-    pub fn update(mut self, outcome: &Outcome) -> Self {
-        match outcome {
+    pub fn update(mut self, outcome: HandOutcome) -> Self {
+        match outcome.outcome {
             Outcome::Win => self.wins += 1,
             Outcome::Tie => self.ties += 1,
             Outcome::Loss => self.losses += 1,
         }
+        *self.distribution.entry(outcome.hand.hand_type).or_insert(0) += 1;
         self
     }
 
-    pub fn merge(mut self, other: &HandOdds) -> Self {
+    pub fn merge(mut self, other: HandOdds) -> Self {
         self.wins += other.wins;
         self.ties += other.ties;
         self.losses += other.losses;
+        for (hand_type, count) in other.distribution {
+            *self.distribution.entry(hand_type).or_insert(0) += count;
+        }
         self
     }
 
@@ -136,8 +147,15 @@ impl HandOdds {
         100f64 * (self.losses as f64 / self.all() as f64)
     }
 
-    fn all(&self) -> u64 {
+    pub fn all(&self) -> u64 {
         self.wins + self.ties + self.losses
+    }
+
+    pub fn distribution(&self) -> impl Iterator<Item = (&HandType, f64)> {
+        self.distribution
+            .iter()
+            .sorted_by_key(|(_hand_type, count)| Reverse(**count))
+            .map(|(hand_type, count)| (hand_type, 100f64 * (*count as f64 / self.all() as f64)))
     }
 }
 
@@ -152,6 +170,20 @@ mod tests {
 
     fn parse_cards(raw: &str) -> Vec<Card> {
         raw.split(' ').map(parse_card).collect()
+    }
+
+    fn winners(hands: &[Hand]) -> Vec<Hand> {
+        outcomes(hands.to_vec())
+            .filter(|o| o.outcome == Win)
+            .map(|o| o.hand)
+            .collect()
+    }
+
+    fn ties(hands: &[Hand]) -> Vec<Hand> {
+        outcomes(hands.to_vec())
+            .filter(|o| o.outcome == Tie)
+            .map(|o| o.hand)
+            .collect()
     }
 
     #[test]
@@ -177,8 +209,8 @@ mod tests {
         let cards1 = parse_cards("As Td 8d 6d 4d");
         let cards2 = parse_cards("Ac Td 8d 6d 4d");
         let hands = [hand(cards1), hand(cards2)];
-        let winners = winners(&hands);
-        assert_eq!(winners.len(), 2);
+        let ties = ties(&hands);
+        assert_eq!(ties.len(), 2);
     }
 
     #[test]
@@ -197,8 +229,8 @@ mod tests {
         let cards2 = parse_cards("Ac 8d 6d 4d 2d");
         let cards3 = parse_cards("Ah 8d 6d 4d 2d");
         let hands = [hand(cards1), hand(cards2), hand(cards3)];
-        let winners = winners(&hands);
-        assert_eq!(winners.len(), 3);
+        let ties = ties(&hands);
+        assert_eq!(ties.len(), 3);
     }
 
     #[test]

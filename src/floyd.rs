@@ -1,13 +1,13 @@
 use std::collections::VecDeque;
 
-pub trait RngTrait<T> {
+pub trait Rng<T> {
     fn generate(&mut self, range: impl std::ops::RangeBounds<T>) -> T;
 }
 
 pub fn permutations<T: Clone>(
     k: usize,
     deck: Vec<T>,
-    mut rng: impl RngTrait<usize>,
+    mut rng: impl Rng<usize>,
 ) -> impl Iterator<Item = Vec<T>> {
     // Robert Floyd's Algorithm: sample a single random permutation
     // https://dl.acm.org/doi/pdf/10.1145/30401.315746
