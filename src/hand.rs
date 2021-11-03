@@ -65,7 +65,8 @@ fn find_k(k: usize, cards: &[Card], ranks_by_count: &HashMap<usize, Vec<Rank>>) 
         cards.iter().partition(|x| ranks.contains(&x.rank));
     let hand_type = match (k, main_cards.len()) {
         (4, _) => FourOfAKind,
-        (3, _) => ThreeOfAKind,
+        (3, 3) => ThreeOfAKind,
+        (3, 6) => FullHouse,
         (2, 4) => TwoPair,
         (2, 2) => Pair,
         _ => None?,
@@ -428,6 +429,14 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn test_tricky_full_house() {
+        let cards = parse_cards("8h 8s 8c Ah As 9c Ac");
+        let result = hand(cards);
+        assert_eq!(result.hand_type, FullHouse);
+        assert_eq!(result.cards.to_vec(), parse_cards("Ah As Ac 8h 8s"));
     }
 
     #[test]
