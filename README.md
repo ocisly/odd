@@ -2,14 +2,10 @@
 
 a rusty Texas Hold'em poker odds simulator.
 
-> _he deals the cards to find the answer_
->
-> _the sacred geometry of chance_
->
-> _the hidden law of a probable outcome_
->
-> _the numbers lead a dance..._ 🎶
->
+> _he deals the cards to find the answer_  
+> _the sacred geometry of chance_  
+> _the hidden law of a probable outcome_  
+> _the numbers lead a dance..._ 🎶  
 > — Sting (Shape of My Heart)
 
 ## Installation
