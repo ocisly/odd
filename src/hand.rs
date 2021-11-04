@@ -73,6 +73,7 @@ fn find_k(k: usize, cards: &[Card], ranks_by_count: &HashMap<usize, Vec<Rank>>) 
         (3, 3) => ThreeOfAKind,
         (3, 6) => FullHouse,
         (2, 4) => TwoPair,
+        (2, 6) => TwoPair,
         (2, 2) => Pair,
         _ => None?,
     };
@@ -347,6 +348,14 @@ mod tests {
                 assert_eq!(result.hand_type, TwoPair);
             }
         }
+    }
+
+    #[test]
+    fn test_two_pair_tricky() {
+        let cards = parse_cards("Qh Qd Jh Jd 6d 6d");
+        let result = hand(cards);
+        assert_eq!(result.hand_type, TwoPair);
+        assert_eq!(result.cards.to_vec(), parse_cards("Qh Qd Jh Jd 6d"));
     }
 
     #[test]
