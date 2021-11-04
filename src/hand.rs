@@ -70,12 +70,12 @@ fn find_k(k: usize, cards: &[Card], ranks_by_count: &HashMap<usize, Vec<Rank>>) 
         cards.iter().partition(|x| ranks.contains(&x.rank));
     let hand_type = match (k, main_cards.len()) {
         (4, _) => FourOfAKind,
-        (3, 3) => ThreeOfAKind,
         (3, 6) => FullHouse,
-        (2, 4) => TwoPair,
+        (3, 3) => ThreeOfAKind,
         (2, 6) => TwoPair,
+        (2, 4) => TwoPair,
         (2, 2) => Pair,
-        _ => None?,
+        (_, _) => unreachable!("k: {} main: {:?} kickers: {:?}", k, main_cards, kickers),
     };
     main_cards.truncate(Hand::HAND_SIZE);
     main_cards.extend_from_slice(kickers.get(..Hand::HAND_SIZE - main_cards.len())?);
