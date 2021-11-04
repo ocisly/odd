@@ -23,7 +23,7 @@ pub fn hand(mut cards: Vec<Card>) -> Hand {
     let three = find_k(3, &cards, &ranks_by_count);
     let pairs = find_k(2, &cards, &ranks_by_count);
 
-    find_straight_flush(&flush)
+    find_straight_flush(&flush, &cards)
         .or_else(|| find_k(4, &cards, &ranks_by_count))
         .or_else(|| find_full_house(&three, &pairs))
         .or(flush)
@@ -43,13 +43,18 @@ fn invert(counts: HashMap<Rank, usize>) -> HashMap<usize, Vec<Rank>> {
         })
 }
 
-fn find_straight_flush(flush: &Option<Hand>) -> Option<Hand> {
+fn find_straight_flush(flush: &Option<Hand>, all_cards: &[Card]) -> Option<Hand> {
     match flush {
         Some(Hand {
             hand_type: Flush,
-            cards,
+            cards: flush_cards,
         }) => {
-            let straight = find_straight(cards)?;
+            let cards = all_cards
+                .iter()
+                .filter(|card| card.suit == flush_cards[0].suit)
+                .copied()
+                .collect_vec();
+            let straight = find_straight(&cards)?;
             Some(Hand {
                 hand_type: StraightFlush,
                 ..straight
@@ -406,6 +411,13 @@ mod tests {
             let result = hand(cards);
             assert_eq!(result.hand_type, StraightFlush, "{:#?}", result);
         }
+    }
+
+    #[test]
+    fn test_straight_flush_with_extra_cards() {
+        let cards = parse_cards("8s 5s 2s 3s 4s 6s");
+        let result = hand(cards);
+        assert_eq!(result.hand_type, StraightFlush, "{:#?}", result);
     }
 
     #[test]
