@@ -75,8 +75,8 @@ player 1 was dealt: A♠️ A♥️
 
 50 cards remain.
 
-player 1: win 82.10%, tie  0.54%, loss 17.36%
-player 2: win 17.36%, tie  0.54%, loss 82.10%
+player 1: win 85.15%, tie  0.54%, loss 14.31%
+player 2: win 14.31%, tie  0.54%, loss 85.15%
 ```
 
 Optionally, `odd` can be instructed to output the distribution of possible
