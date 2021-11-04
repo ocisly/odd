@@ -63,10 +63,7 @@ fn main() {
         let hands = hands(players, opt.board);
         let outcomes = outcomes(hands);
         for (i, outcome) in outcomes.enumerate() {
-            print!("player {} has {}: ", i + 1, outcome.hand);
-            for card in outcome.hand.cards {
-                print!("{} ", card);
-            }
+            print!("player {} has {} ", i + 1, outcome.hand);
             match outcome.outcome {
                 Outcome::Win => print!("(winner)"),
                 Outcome::Tie => print!("(tie)"),
@@ -152,7 +149,12 @@ impl Display for Hand {
             ),
             Pair => write!(fmt, "{}", PluralRank(high)),
             HighCard => write!(fmt, "{}", VerboseRank(high)),
+        }?;
+        write!(fmt, ":")?;
+        for card in self.cards {
+            write!(fmt, " {}", card)?;
         }
+        Ok(())
     }
 }
 
