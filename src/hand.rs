@@ -1,8 +1,7 @@
 use crate::card::Rank::*;
-use crate::card::{combine_cards, Card, Cards, Players, Rank};
+use crate::card::{combine_cards, Card, Cards, Players};
 use itertools::Itertools;
 use std::cmp::{Ordering, Reverse};
-use std::collections::HashMap;
 use HandType::*;
 
 pub fn hands(players: &Players, board: &Cards) -> Vec<Hand> {
@@ -15,28 +14,16 @@ pub fn hands(players: &Players, board: &Cards) -> Vec<Hand> {
 pub fn hand(mut cards: Vec<Card>) -> Hand {
     cards.sort_by_key(|x| Reverse(x.rank));
     let flush = find_flush(&cards);
-    let ranks_by_count = invert(cards.iter().counts_by(|c| c.rank));
-    let three = find_k(3, &cards, &ranks_by_count);
-    let pairs = find_k(2, &cards, &ranks_by_count);
-
-    find_straight_flush(&flush, &cards)
-        .or_else(|| find_k(4, &cards, &ranks_by_count))
-        .or_else(|| find_full_house(&three, &pairs))
-        .or(flush)
-        .or_else(|| find_straight(&cards))
-        .or(three)
-        .or(pairs)
-        .or_else(|| find_high_card(&cards))
-        .unwrap()
-}
-
-fn invert(counts: HashMap<Rank, usize>) -> HashMap<usize, Vec<Rank>> {
-    counts
-        .into_iter()
-        .fold(HashMap::new(), |mut acc, (rank, count)| {
-            acc.entry(count).or_insert_with(Vec::new).push(rank);
-            acc
-        })
+    [
+        find_straight_flush(&flush, &cards),
+        flush,
+        find_groups(&cards),
+        find_straight(&cards),
+    ]
+    .into_iter()
+    .flatten()
+    .max()
+    .unwrap_or_else(|| find_high_card(&cards))
 }
 
 fn find_straight_flush(flush: &Option<Hand>, all_cards: &Cards) -> Option<Hand> {
@@ -60,62 +47,70 @@ fn find_straight_flush(flush: &Option<Hand>, all_cards: &Cards) -> Option<Hand> 
     }
 }
 
-fn find_k(k: usize, cards: &Cards, ranks_by_count: &HashMap<usize, Vec<Rank>>) -> Option<Hand> {
-    let ranks = ranks_by_count.get(&k)?;
-    let (mut main_cards, kickers): (Vec<_>, Vec<_>) =
-        cards.iter().partition(|x| ranks.contains(&x.rank));
-    let hand_type = match (k, main_cards.len()) {
-        (4, _) => FourOfAKind,
-        (3, 6) => FullHouse,
-        (3, 3) => ThreeOfAKind,
-        (2, 6) => TwoPair,
-        (2, 4) => TwoPair,
-        (2, 2) => Pair,
-        (_, _) => unreachable!("k: {} main: {:?} kickers: {:?}", k, main_cards, kickers),
-    };
-    main_cards.truncate(Hand::HAND_SIZE);
-    main_cards.extend_from_slice(kickers.get(..Hand::HAND_SIZE - main_cards.len())?);
-
-    Some(Hand {
-        hand_type,
-        cards: main_cards.try_into().ok()?,
-    })
-}
-
-fn find_full_house(three: &Option<Hand>, pairs: &Option<Hand>) -> Option<Hand> {
-    match (three, pairs) {
-        (
-            Some(Hand {
-                hand_type: ThreeOfAKind,
-                cards: three_cards,
-            }),
-            Some(Hand {
-                hand_type: TwoPair | Pair,
-                cards: pairs_cards,
-            }),
-        ) => Some(Hand {
-            hand_type: FullHouse,
-            cards: {
-                let mut cards = *three_cards;
-                cards[3..].copy_from_slice(&pairs_cards[..2]);
-                cards
-            },
+fn find_groups(cards: &Cards) -> Option<Hand> {
+    let (four, three, pairs) = groups(cards);
+    match (&four[..], &three[..], &pairs[..]) {
+        ([four], _, _) => Some(Hand {
+            hand_type: FourOfAKind,
+            cards: cards_for_hand(four.to_vec(), cards),
         }),
-        _ => None,
+        ([], [three1, three2], _) => Some(Hand {
+            hand_type: FullHouse,
+            cards: cards_for_hand(combine_cards(&[three1, three2]), cards),
+        }),
+        ([], [three], [two, ..]) => Some(Hand {
+            hand_type: FullHouse,
+            cards: cards_for_hand(combine_cards(&[three, two]), cards),
+        }),
+        ([], [three], []) => Some(Hand {
+            hand_type: ThreeOfAKind,
+            cards: cards_for_hand(three.to_vec(), cards),
+        }),
+        ([], [], [pair1, pair2, ..]) => Some(Hand {
+            hand_type: TwoPair,
+            cards: cards_for_hand(combine_cards(&[pair1, pair2]), cards),
+        }),
+        ([], [], [pair]) => Some(Hand {
+            hand_type: Pair,
+            cards: cards_for_hand(pair.to_vec(), cards),
+        }),
+        ([], [], []) => None,
+        _ => unreachable!("too many cards"),
     }
 }
 
-fn find_high_card(cards: &Cards) -> Option<Hand> {
-    Some(Hand {
+fn groups(cards: &Cards) -> (Vec<[Card; 4]>, Vec<[Card; 3]>, Vec<[Card; 2]>) {
+    let grouped_cards = cards.iter().group_by(|c| c.rank);
+    let (mut four, mut three, mut pairs) = (vec![], vec![], vec![]);
+    for (_rank, cards) in grouped_cards.into_iter() {
+        let cards = cards.copied().collect_vec();
+        match cards.len() {
+            4 => four.push(cards.try_into().unwrap()),
+            3 => three.push(cards.try_into().unwrap()),
+            2 => pairs.push(cards.try_into().unwrap()),
+            _ => {}
+        }
+    }
+    (four, three, pairs)
+}
+
+fn cards_for_hand(mut main_cards: Vec<Card>, all_cards: &[Card]) -> [Card; Hand::HAND_SIZE] {
+    let n_kickers = main_cards.len().min(Hand::HAND_SIZE);
+    let kickers = all_cards
+        .iter()
+        .filter(|card| !main_cards.contains(card))
+        .take(Hand::HAND_SIZE - n_kickers)
+        .collect_vec();
+    main_cards.truncate(Hand::HAND_SIZE);
+    main_cards.extend(kickers);
+    main_cards.try_into().unwrap()
+}
+
+fn find_high_card(cards: &Cards) -> Hand {
+    Hand {
         hand_type: HighCard,
-        cards: cards
-            .iter()
-            .take(Hand::HAND_SIZE)
-            .copied()
-            .collect::<Vec<_>>()
-            .try_into()
-            .ok()?,
-    })
+        cards: cards[..Hand::HAND_SIZE].try_into().unwrap(),
+    }
 }
 
 fn find_flush(cards: &Cards) -> Option<Hand> {
@@ -158,7 +153,7 @@ fn find_straight(cards: &Cards) -> Option<Hand> {
 
 #[cfg(test)]
 pub fn gen_flushes() -> impl Iterator<Item = Vec<Card>> {
-    use crate::card::Suit;
+    use crate::card::{Rank, Suit};
     use std::iter::repeat;
     shuffled(&Rank::ALL)
         .combinations_with_replacement(5)
@@ -178,7 +173,7 @@ pub fn gen_flushes() -> impl Iterator<Item = Vec<Card>> {
 
 #[cfg(test)]
 pub fn gen_straights() -> impl Iterator<Item = Vec<Card>> {
-    use crate::card::Suit;
+    use crate::card::{Rank, Suit};
     shuffled(&Suit::ALL)
         .combinations_with_replacement(5)
         .filter(move |suits| suits.iter().unique().count() >= 2)
@@ -197,7 +192,7 @@ pub fn gen_straights() -> impl Iterator<Item = Vec<Card>> {
 
 #[cfg(test)]
 pub fn gen_straight_flushes() -> impl Iterator<Item = Vec<Card>> {
-    use crate::card::Suit;
+    use crate::card::{Rank, Suit};
     shuffled(&Suit::ALL).flat_map(move |suit| {
         Rank::ALL_WITH_BOTH_ACES
             .windows(5)
@@ -280,8 +275,8 @@ pub enum HandType {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::card::Suit;
     use crate::card::Suit::*;
+    use crate::card::{Rank, Suit};
     use std::iter::repeat;
 
     fn parse_card(raw: &str) -> Card {

@@ -155,6 +155,7 @@ impl HandOdds {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::card::Card;
     use crate::hand::{gen_flushes, gen_straights, hand};
 
     fn parse_card(raw: &str) -> Card {
@@ -194,7 +195,7 @@ mod tests {
         let hands = [hand(cards_winner), hand(cards_loser)];
         let winners = winners(&hands);
         assert_eq!(winners.len(), 1);
-        assert!(winners.contains(&&hands[0]));
+        assert!(winners.contains(&hands[0]));
     }
 
     #[test]
@@ -213,7 +214,7 @@ mod tests {
         let hands = [hand(cards1), hand(cards2)];
         let winners = winners(&hands);
         assert_eq!(winners.len(), 1);
-        assert!(winners.contains(&&hands[0]));
+        assert!(winners.contains(&hands[0]));
     }
 
     #[test]
@@ -233,7 +234,7 @@ mod tests {
         let hands = [hand(cards1), hand(cards2)];
         let winners = winners(&hands);
         assert_eq!(winners.len(), 1);
-        assert!(winners.contains(&&hands[0]));
+        assert!(winners.contains(&hands[0]));
     }
 
     #[test]
@@ -242,7 +243,7 @@ mod tests {
             for straight in gen_straights().take(1000) {
                 let hands = [hand(flush.clone()), hand(straight)];
                 let winners = winners(&hands);
-                assert!(winners.contains(&&hands[0]));
+                assert!(winners.contains(&hands[0]));
             }
         }
     }
@@ -253,7 +254,7 @@ mod tests {
         let cards2 = parse_cards("7s 6c As Ks Qs Js 5s");
         let hands = [hand(cards1), hand(cards2)];
         let winners = winners(&hands);
-        assert!(winners.contains(&&hands[0]));
+        assert!(winners.contains(&hands[0]));
         assert_eq!(winners.len(), 1);
     }
 }
