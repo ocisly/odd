@@ -143,7 +143,6 @@ fn find_straight(cards: &Cards) -> Option<Hand> {
             straight.push(*ace);
         }
     }
-    straight.reverse();
     straight.truncate(Hand::HAND_SIZE);
     Some(Hand {
         hand_type: Straight,
@@ -383,7 +382,15 @@ mod tests {
         let cards = parse_cards("As 2s 2d 3d 4s 5h 5c");
         let result = hand(cards);
         assert_eq!(result.hand_type, Straight);
-        assert_eq!(result.cards.to_vec(), parse_cards("As 2s 3d 4s 5h"));
+        assert_eq!(result.cards.to_vec(), parse_cards("5h 4s 3d 2s As"));
+    }
+
+    #[test]
+    fn test_elongated_straight() {
+        let cards = parse_cards("As 2s 2d 3d 4s 5h 6c");
+        let result = hand(cards);
+        assert_eq!(result.hand_type, Straight);
+        assert_eq!(result.cards.to_vec(), parse_cards("6c 5h 4s 3d 2s"));
     }
 
     #[test]
@@ -391,7 +398,7 @@ mod tests {
         let cards = parse_cards("As 2d 2s 3s 4s 5s 5c");
         let result = hand(cards);
         assert_eq!(result.hand_type, StraightFlush, "{:#?}", result);
-        assert_eq!(result.cards.to_vec(), parse_cards("As 2s 3s 4s 5s"));
+        assert_eq!(result.cards.to_vec(), parse_cards("5s 4s 3s 2s As"));
     }
 
     #[test]
