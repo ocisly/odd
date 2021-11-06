@@ -1,21 +1,21 @@
-use crate::card::Card;
+use crate::card::{combine_cards, combine_players, Cards, Players};
 use crate::deck::Deck;
 use crate::floyd::permutations;
 use crate::floyd::Rng;
-use crate::hand::{combine_cards, hands, Hand, HandType};
+use crate::hand::{hands, Hand, HandType};
 use itertools::Itertools;
 use rayon::prelude::*;
 use std::cmp::Reverse;
 use std::collections::HashMap;
 use Outcome::*;
 
-const HOLE_CARDS_PER_PLAYER: usize = 2;
-const BOARD_LENGTH: usize = 5;
+pub const HOLE_CARDS_PER_PLAYER: usize = 2;
+pub const BOARD_LENGTH: usize = 5;
 
 pub fn odds(
     opponents: usize,
-    players: Vec<Vec<Card>>,
-    board: Vec<Card>,
+    players: &Players,
+    board: &Cards,
     deck: Deck,
     desired_samples: usize,
     rng: impl Rng<usize> + Send,
@@ -31,21 +31,14 @@ where
         .par_bridge()
         .map(|scenario| {
             let (extra_hole, extra_board) = scenario.split_at(unknown_hole_cards);
-            let extra_players = extra_hole
-                .chunks_exact(HOLE_CARDS_PER_PLAYER)
-                .map(|x| x.to_vec())
-                .collect_vec();
+            let extra_players = extra_hole.chunks_exact(HOLE_CARDS_PER_PLAYER).collect_vec();
 
-            let all_players = combine_players(&[&players, &extra_players]);
-            let community_cards = combine_cards(&[&board, extra_board]);
-            outcomes(hands(all_players, community_cards))
+            let all_players = combine_players(&[players, &extra_players]);
+            let community_cards = combine_cards(&[board, extra_board]);
+            outcomes(hands(&all_players, &community_cards))
         })
         .fold(new_odds, Odds::update)
         .reduce(new_odds, Odds::merge)
-}
-
-fn combine_players(players: &[&[Vec<Card>]]) -> Vec<Vec<Card>> {
-    players.iter().copied().flatten().cloned().collect_vec()
 }
 
 pub fn outcomes(hands: Vec<Hand>) -> impl Iterator<Item = HandOutcome> {

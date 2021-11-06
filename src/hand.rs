@@ -1,19 +1,15 @@
 use crate::card::Rank::*;
-use crate::card::{Card, Rank};
+use crate::card::{combine_cards, Card, Cards, Players, Rank};
 use itertools::Itertools;
 use std::cmp::{Ordering, Reverse};
 use std::collections::HashMap;
 use HandType::*;
 
-pub fn hands(players: Vec<Vec<Card>>, board: Vec<Card>) -> Vec<Hand> {
+pub fn hands(players: &Players, board: &Cards) -> Vec<Hand> {
     players
         .iter()
-        .map(|hole| hand(combine_cards(&[hole, &board])))
+        .map(|hole| hand(combine_cards(&[hole, board])))
         .collect_vec()
-}
-
-pub fn combine_cards(sources: &[&[Card]]) -> Vec<Card> {
-    sources.iter().copied().flatten().copied().collect_vec()
 }
 
 pub fn hand(mut cards: Vec<Card>) -> Hand {
@@ -43,7 +39,7 @@ fn invert(counts: HashMap<Rank, usize>) -> HashMap<usize, Vec<Rank>> {
         })
 }
 
-fn find_straight_flush(flush: &Option<Hand>, all_cards: &[Card]) -> Option<Hand> {
+fn find_straight_flush(flush: &Option<Hand>, all_cards: &Cards) -> Option<Hand> {
     match flush {
         Some(Hand {
             hand_type: Flush,
@@ -64,7 +60,7 @@ fn find_straight_flush(flush: &Option<Hand>, all_cards: &[Card]) -> Option<Hand>
     }
 }
 
-fn find_k(k: usize, cards: &[Card], ranks_by_count: &HashMap<usize, Vec<Rank>>) -> Option<Hand> {
+fn find_k(k: usize, cards: &Cards, ranks_by_count: &HashMap<usize, Vec<Rank>>) -> Option<Hand> {
     let ranks = ranks_by_count.get(&k)?;
     let (mut main_cards, kickers): (Vec<_>, Vec<_>) =
         cards.iter().partition(|x| ranks.contains(&x.rank));
@@ -109,7 +105,7 @@ fn find_full_house(three: &Option<Hand>, pairs: &Option<Hand>) -> Option<Hand> {
     }
 }
 
-fn find_high_card(cards: &[Card]) -> Option<Hand> {
+fn find_high_card(cards: &Cards) -> Option<Hand> {
     Some(Hand {
         hand_type: HighCard,
         cards: cards
@@ -122,7 +118,7 @@ fn find_high_card(cards: &[Card]) -> Option<Hand> {
     })
 }
 
-fn find_flush(cards: &[Card]) -> Option<Hand> {
+fn find_flush(cards: &Cards) -> Option<Hand> {
     let mut flush = cards
         .iter()
         .copied()
@@ -137,7 +133,7 @@ fn find_flush(cards: &[Card]) -> Option<Hand> {
     })
 }
 
-fn find_straight(cards: &[Card]) -> Option<Hand> {
+fn find_straight(cards: &Cards) -> Option<Hand> {
     let mut straight = cards
         .iter()
         .copied()

@@ -23,14 +23,13 @@ fn main() {
     let opt = Opt::from_args();
     let players = opt
         .hole_cards
-        .chunks_exact(2)
-        .map(|x| x.to_vec())
+        .chunks_exact(calc::HOLE_CARDS_PER_PLAYER)
         .collect_vec();
     let mut deck = Deck::default();
 
     for (i, player) in players.iter().enumerate() {
         print!("player {} was dealt: ", i + 1);
-        for card in player {
+        for card in *player {
             deck.remove(card);
             print!("{} ", card);
         }
@@ -59,8 +58,8 @@ fn main() {
     println!();
     println!();
 
-    if opt.board.len() == 5 && opt.opponents == 0 {
-        let hands = hands(players, opt.board);
+    if opt.board.len() == calc::BOARD_LENGTH && opt.opponents == 0 {
+        let hands = hands(&players, &opt.board);
         let outcomes = outcomes(hands);
         for (i, outcome) in outcomes.enumerate() {
             print!("player {} has {} ", i + 1, outcome.hand);
@@ -75,8 +74,8 @@ fn main() {
         let rng = Rng::with_seed(opt.seed);
         for (i, odds) in odds(
             opt.opponents,
-            players,
-            opt.board,
+            &players,
+            &opt.board,
             deck,
             opt.permutations,
             rng,
