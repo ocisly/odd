@@ -24,7 +24,7 @@ pub fn permutations<T: Clone>(
     std::iter::from_fn(move || {
         result.clear();
         for j in (n - k)..n {
-            let t = rng.generate(0..j + 1);
+            let t = rng.generate(0..=j);
             if let Some(i) = result.iter().position(|x| *x == t) {
                 result.insert(i + 1, j);
             } else {

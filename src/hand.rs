@@ -30,11 +30,11 @@ fn find_straight_flush(flush: &Option<Hand>, all_cards: &Cards) -> Option<Hand> 
     match flush {
         Some(Hand {
             hand_type: Flush,
-            cards: flush_cards,
+            cards: [Card { suit, .. }, ..],
         }) => {
             let cards = all_cards
                 .iter()
-                .filter(|card| card.suit == flush_cards[0].suit)
+                .filter(|card| card.suit == *suit)
                 .copied()
                 .collect_vec();
             let straight = find_straight(&cards)?;
@@ -95,15 +95,14 @@ fn groups(cards: &Cards) -> (Vec<[Card; 4]>, Vec<[Card; 3]>, Vec<[Card; 2]>) {
 }
 
 fn cards_for_hand(mut main_cards: Vec<Card>, all_cards: &[Card]) -> [Card; Hand::HAND_SIZE] {
-    let n_kickers = main_cards.len().min(Hand::HAND_SIZE);
+    let main_count = main_cards.len().min(Hand::HAND_SIZE);
     let kickers = all_cards
         .iter()
         .filter(|card| !main_cards.contains(card))
-        .take(Hand::HAND_SIZE - n_kickers)
+        .take(Hand::HAND_SIZE - main_count)
         .collect_vec();
-    main_cards.truncate(Hand::HAND_SIZE);
     main_cards.extend(kickers);
-    main_cards.try_into().unwrap()
+    main_cards[..Hand::HAND_SIZE].try_into().unwrap()
 }
 
 fn find_high_card(cards: &Cards) -> Hand {
@@ -114,17 +113,16 @@ fn find_high_card(cards: &Cards) -> Hand {
 }
 
 fn find_flush(cards: &Cards) -> Option<Hand> {
-    let mut flush = cards
+    let flush = cards
         .iter()
         .copied()
         .into_group_map_by(|c| c.suit)
         .into_iter()
         .find(|(_, v)| v.len() >= 5)?
         .1;
-    flush.truncate(Hand::HAND_SIZE);
     Some(Hand {
         hand_type: Flush,
-        cards: flush.try_into().ok()?,
+        cards: flush[..Hand::HAND_SIZE].try_into().ok()?,
     })
 }
 
