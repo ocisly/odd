@@ -35,13 +35,17 @@ where
 
             let all_players = combine_players(&[players, &extra_players]);
             let community_cards = combine_cards(&[board, extra_board]);
-            outcomes(hands(&all_players, &community_cards))
+            outcomes(&all_players, &community_cards)
         })
         .fold(new_odds, Odds::update)
         .reduce(new_odds, Odds::merge)
 }
 
-pub fn outcomes(hands: Vec<Hand>) -> impl Iterator<Item = HandOutcome> {
+pub fn outcomes(players: &Players, board: &Cards) -> impl Iterator<Item = HandOutcome> {
+    hand_outcomes(hands(players, board))
+}
+
+fn hand_outcomes(hands: Vec<Hand>) -> impl Iterator<Item = HandOutcome> {
     let max = hands.iter().max().unwrap().clone();
     let n_winners = hands.iter().filter(|x| **x == max).count();
     let win = if n_winners == 1 { Win } else { Tie };
@@ -167,14 +171,14 @@ mod tests {
     }
 
     fn winners(hands: &[Hand]) -> Vec<Hand> {
-        outcomes(hands.to_vec())
+        hand_outcomes(hands.to_vec())
             .filter(|o| o.outcome == Win)
             .map(|o| o.hand)
             .collect()
     }
 
     fn ties(hands: &[Hand]) -> Vec<Hand> {
-        outcomes(hands.to_vec())
+        hand_outcomes(hands.to_vec())
             .filter(|o| o.outcome == Tie)
             .map(|o| o.hand)
             .collect()

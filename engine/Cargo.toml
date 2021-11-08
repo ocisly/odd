@@ -1,0 +1,11 @@
+[package]
+name = "odd-engine"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+itertools = "0.10.1"
+rayon = "1.5.1"
+
+[dev-dependencies]
+fastrand = "1.5.0"
