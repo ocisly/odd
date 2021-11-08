@@ -39,8 +39,13 @@ pub fn permutations<T: Clone>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fastrand::Rng;
     use itertools::Itertools;
+
+    impl Rng<usize> for fastrand::Rng {
+        fn generate(&mut self, range: impl std::ops::RangeBounds<usize>) -> usize {
+            self.usize(range)
+        }
+    }
 
     fn mean(data: &[usize]) -> f64 {
         // rust cookbook
@@ -73,7 +78,7 @@ mod tests {
 
         for seed in [0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144] {
             let vec = vec!["a", "b", "c"];
-            let rng = Rng::with_seed(seed);
+            let rng = fastrand::Rng::with_seed(seed);
             let result = permutations(2, vec, rng)
                 .take(n)
                 .map(|combo| combo.join(","))
@@ -96,7 +101,7 @@ mod tests {
     #[test]
     fn test_permutations_n_3_k_2() {
         let vec = vec!["a", "b", "c"];
-        let rng = Rng::with_seed(1);
+        let rng = fastrand::Rng::with_seed(1);
         let result = permutations(2, vec, rng)
             .take(100)
             .map(|combo| {
