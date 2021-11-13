@@ -10,3 +10,4 @@ pub use calc::{odds, outcomes, Outcome, BOARD_LENGTH, HOLE_CARDS_PER_PLAYER};
 pub use card::Card;
 pub use deck::Deck;
 pub use floyd::Rng;
+pub use hand::Hand;
