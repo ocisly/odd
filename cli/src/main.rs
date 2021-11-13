@@ -1,22 +1,20 @@
 use fastrand::Rng;
 use git_version::git_version;
 use itertools::Itertools;
-use odd_engine::{odds, outcomes, Card, Deck, Outcome, BOARD_LENGTH, HOLE_CARDS_PER_PLAYER};
+use odd_engine::{Card, Game, GameOutcome, GameState, Outcome, HOLE_CARDS_PER_PLAYER};
 use structopt::StructOpt;
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let opt = Opt::from_args();
     let players = opt
         .hole_cards
         .chunks_exact(HOLE_CARDS_PER_PLAYER)
+        .map(|x| x.try_into().unwrap())
         .collect_vec();
-    let mut deck = Deck::default();
-
     for (i, player) in players.iter().enumerate() {
         print!("player {} was dealt: ", i + 1);
-        for card in *player {
-            deck.remove(card).ok().expect("duplicate card!");
-            print!("{} ", *card);
+        for card in player {
+            print!("{} ", card);
         }
         println!();
     }
@@ -31,58 +29,57 @@ fn main() {
     for (name, cards) in board {
         print!("{}:", name);
         for card in cards {
-            deck.remove(card).ok().expect("duplicate card!");
             print!(" {}", *card);
         }
         println!();
     }
 
-    println!();
-    print!("{} cards remain.", deck.len());
+    let rng = Rng::with_seed(opt.seed);
+    let rng = RngAdapter(rng);
+    let game = Game::new(players, opt.board, opt.opponents);
+    let GameOutcome {
+        state,
+        cards_remaining,
+    } = game.play(rng, opt.permutations)?;
 
     println!();
+
+    println!("{} cards remain.", cards_remaining);
+
     println!();
 
-    if opt.board.len() == BOARD_LENGTH && opt.opponents == 0 {
-        let outcomes = outcomes(&players, &opt.board);
-        for (i, outcome) in outcomes.enumerate() {
-            print!("player {} has {} ", i + 1, outcome.hand);
-            match outcome.outcome {
-                Outcome::Win => print!("(winner)"),
-                Outcome::Tie => print!("(tie)"),
-                Outcome::Loss => print!("(lost)"),
+    match state {
+        GameState::GameOver(outcomes) => {
+            for (i, outcome) in outcomes.into_iter().enumerate() {
+                print!("player {} has {} ", i + 1, outcome.hand);
+                match outcome.outcome {
+                    Outcome::Win => print!("(winner)"),
+                    Outcome::Tie => print!("(tie)"),
+                    Outcome::Loss => print!("(lost)"),
+                }
+                println!();
             }
-            println!();
         }
-    } else {
-        let rng = Rng::with_seed(opt.seed);
-        for (i, odds) in odds(
-            opt.opponents,
-            &players,
-            &opt.board,
-            deck,
-            opt.permutations,
-            RngAdapter(rng),
-        )
-        .into_iter()
-        .enumerate()
-        {
-            println!(
-                "player {}: win {:5.2}%, tie {:5.2}%, loss {:5.2}%",
-                i + 1,
-                odds.win_percent(),
-                odds.tie_percent(),
-                odds.loss_percent(),
-            );
-            if !opt.distribution {
-                continue;
+        GameState::Undecided(all_odds) => {
+            for (i, odds) in all_odds.into_iter().enumerate() {
+                println!(
+                    "player {}: win {:5.2}%, tie {:5.2}%, loss {:5.2}%",
+                    i + 1,
+                    odds.win_percent(),
+                    odds.tie_percent(),
+                    odds.loss_percent(),
+                );
+                if !opt.distribution {
+                    continue;
+                }
+                for (hand_type, percent) in odds.distribution() {
+                    println!("{:20}: {:5.2}%", *hand_type, percent);
+                }
+                println!();
             }
-            for (hand_type, percent) in odds.distribution() {
-                println!("{:20}: {:5.2}%", *hand_type, percent);
-            }
-            println!();
         }
     }
+    Ok(())
 }
 
 struct RngAdapter(Rng);

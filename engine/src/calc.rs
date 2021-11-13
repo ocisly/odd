@@ -1,4 +1,4 @@
-use crate::card::{combine_cards, combine_players, Cards, Players};
+use crate::card::{combine_cards, combine_players, Cards, Players, HOLE_CARDS_PER_PLAYER};
 use crate::deck::Deck;
 use crate::floyd::permutations;
 use crate::floyd::Rng;
@@ -9,7 +9,6 @@ use std::cmp::Reverse;
 use std::collections::HashMap;
 use Outcome::*;
 
-pub const HOLE_CARDS_PER_PLAYER: usize = 2;
 pub const BOARD_LENGTH: usize = 5;
 
 pub fn odds(
@@ -31,7 +30,10 @@ where
         .par_bridge()
         .map(|scenario| {
             let (extra_hole, extra_board) = scenario.split_at(unknown_hole_cards);
-            let extra_players = extra_hole.chunks_exact(HOLE_CARDS_PER_PLAYER).collect_vec();
+            let extra_players = extra_hole
+                .chunks_exact(HOLE_CARDS_PER_PLAYER)
+                .map(|x| x.try_into().unwrap())
+                .collect_vec();
 
             let all_players = combine_players(&[players, &extra_players]);
             let community_cards = combine_cards(&[board, extra_board]);
@@ -61,7 +63,7 @@ pub struct HandOutcome {
     pub hand: Hand,
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Outcome {
     Win,
     Tie,

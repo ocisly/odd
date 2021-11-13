@@ -1,17 +1,30 @@
 use std::collections::HashSet;
+use std::error::Error;
+use std::fmt::{Display, Formatter};
 
 use crate::card::{Card, Rank, Suit};
 
 pub struct Deck(HashSet<Card>);
 
-pub struct DeckError;
+#[derive(Debug)]
+pub enum DeckError {
+    DuplicateCard(Card),
+}
+impl Display for DeckError {
+    fn fmt(&self, fmt: &mut Formatter) -> Result<(), std::fmt::Error> {
+        match self {
+            DeckError::DuplicateCard(card) => write!(fmt, "duplicate card: {}", card),
+        }
+    }
+}
+impl Error for DeckError {}
 
 impl Deck {
     pub fn remove(&mut self, card: &Card) -> Result<(), DeckError> {
         if self.0.remove(card) {
             Ok(())
         } else {
-            Err(DeckError)
+            Err(DeckError::DuplicateCard(*card))
         }
     }
 
