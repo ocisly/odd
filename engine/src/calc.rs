@@ -1,4 +1,4 @@
-use crate::card::{combine_cards, combine_players, Cards, Players, HOLE_CARDS_PER_PLAYER};
+use crate::card::{Cards, Players, HOLE_CARDS_PER_PLAYER};
 use crate::deck::Deck;
 use crate::floyd::permutations;
 use crate::floyd::Rng;
@@ -35,8 +35,8 @@ where
                 .map(|x| x.try_into().unwrap())
                 .collect_vec();
 
-            let all_players = combine_players(&[players, &extra_players]);
-            let community_cards = combine_cards(&[board, extra_board]);
+            let all_players = [players, &extra_players].concat();
+            let community_cards = [board, extra_board].concat();
             outcomes(&all_players, &community_cards)
         })
         .fold(new_odds, Odds::update)

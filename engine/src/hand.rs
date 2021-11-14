@@ -1,5 +1,5 @@
 use crate::card::Rank::*;
-use crate::card::{combine_cards, Card, Cards, Players};
+use crate::card::{Card, Cards, Players};
 use itertools::Itertools;
 use std::cmp::{Ordering, Reverse};
 use HandType::*;
@@ -7,7 +7,7 @@ use HandType::*;
 pub fn hands(players: &Players, board: &Cards) -> Vec<Hand> {
     players
         .iter()
-        .map(|hole| hand(combine_cards(&[hole, board])))
+        .map(|hole| hand([hole, board].concat()))
         .collect_vec()
 }
 
@@ -56,11 +56,11 @@ fn find_groups(cards: &Cards) -> Option<Hand> {
         }),
         ([], [three1, three2], _) => Some(Hand {
             hand_type: FullHouse,
-            cards: cards_for_hand(combine_cards(&[three1, three2]), cards),
+            cards: cards_for_hand([*three1, *three2].concat(), cards),
         }),
         ([], [three], [two, ..]) => Some(Hand {
             hand_type: FullHouse,
-            cards: cards_for_hand(combine_cards(&[three, two]), cards),
+            cards: cards_for_hand([&three[..], &two[..]].concat(), cards),
         }),
         ([], [three], []) => Some(Hand {
             hand_type: ThreeOfAKind,
@@ -68,7 +68,7 @@ fn find_groups(cards: &Cards) -> Option<Hand> {
         }),
         ([], [], [pair1, pair2, ..]) => Some(Hand {
             hand_type: TwoPair,
-            cards: cards_for_hand(combine_cards(&[pair1, pair2]), cards),
+            cards: cards_for_hand([*pair1, *pair2].concat(), cards),
         }),
         ([], [], [pair]) => Some(Hand {
             hand_type: Pair,
