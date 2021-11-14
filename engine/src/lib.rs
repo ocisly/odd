@@ -7,7 +7,7 @@ mod game;
 mod hand;
 mod parse;
 
-pub use calc::{odds, outcomes, Outcome, BOARD_LENGTH};
+pub use calc::{odds, outcomes, HandOutcome, Odds, Outcome, BOARD_LENGTH};
 pub use card::{Card, HOLE_CARDS_PER_PLAYER};
 pub use deck::Deck;
 pub use floyd::Rng;
