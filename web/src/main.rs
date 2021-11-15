@@ -2,6 +2,7 @@ use fastrand::Rng;
 use odd_engine::{Card, Game, GameOutcome, GameState, HandOutcome, Odds, HOLE_CARDS_PER_PLAYER};
 use serde_with::{serde_as, DisplayFromStr};
 use std::collections::HashMap;
+use std::env;
 use tide::prelude::*;
 use tide::{Body, Request};
 
@@ -19,12 +20,15 @@ struct Input {
 #[async_std::main]
 async fn main() -> tide::Result<()> {
     let mut app = tide::new();
-    app.at("/run").post(run);
-    app.listen("127.0.0.1:8080").await?;
+    let port = env::var("ODD_PORT")
+        .map(|port| port.parse())
+        .unwrap_or(Ok(8080))?;
+    app.at("/evaluate").post(evaluate);
+    app.listen(format!("localhost:{}", port)).await?;
     Ok(())
 }
 
-async fn run(mut req: Request<()>) -> tide::Result<Body> {
+async fn evaluate(mut req: Request<()>) -> tide::Result<Body> {
     let Input {
         players,
         board,
