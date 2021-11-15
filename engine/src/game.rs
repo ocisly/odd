@@ -44,11 +44,11 @@ impl Game {
         for card in &self.board {
             deck.remove(card)?;
         }
-        let remaining = deck.len();
+        let cards_remaining = deck.len();
         Ok(if self.is_over() {
             GameOutcome {
                 state: GameState::GameOver(outcomes(&self.players, &self.board).collect()),
-                cards_remaining: remaining,
+                cards_remaining,
             }
         } else {
             GameOutcome {
@@ -60,7 +60,7 @@ impl Game {
                     permutations,
                     rng,
                 )),
-                cards_remaining: remaining,
+                cards_remaining,
             }
         })
     }

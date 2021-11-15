@@ -95,13 +95,11 @@ fn groups(cards: &Cards) -> (Vec<[Card; 4]>, Vec<[Card; 3]>, Vec<[Card; 2]>) {
 }
 
 fn cards_for_hand(mut main_cards: Vec<Card>, all_cards: &[Card]) -> [Card; Hand::HAND_SIZE] {
-    let main_count = main_cards.len().min(Hand::HAND_SIZE);
-    let kickers = all_cards
-        .iter()
-        .filter(|card| !main_cards.contains(card))
-        .take(Hand::HAND_SIZE - main_count)
-        .collect_vec();
-    main_cards.extend(kickers);
+    for card in all_cards {
+        if !main_cards.contains(card) {
+            main_cards.push(*card);
+        }
+    }
     main_cards[..Hand::HAND_SIZE].try_into().unwrap()
 }
 
@@ -129,12 +127,11 @@ fn find_flush(cards: &Cards) -> Option<Hand> {
 fn find_straight(cards: &Cards) -> Option<Hand> {
     let mut straight = cards
         .iter()
-        .copied()
         .dedup_by(|card1, card2| card1.rank == card2.rank)
         .enumerate()
         .group_by(|(i, card)| card.rank as i16 - (cards.len() - *i) as i16)
         .into_iter()
-        .map(|(_, group)| group.map(|(_i, card)| card).collect_vec())
+        .map(|(_, group)| group.map(|(_i, card)| *card).collect_vec())
         .find(|v| v.len() >= 4)?;
     if let ace @ Card { rank: Ace, .. } = cards.first()? {
         if let Card { rank: Deuce, .. } = straight.last()? {
