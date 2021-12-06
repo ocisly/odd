@@ -74,8 +74,9 @@ pub struct Odds(Vec<HandOdds>);
 
 impl Odds {
     fn new(num_players: usize) -> Self {
-        Self(vec![HandOdds::default(); num_players])
+        Self((1..=num_players as u64).map(HandOdds::new).collect())
     }
+
     fn update(self, outcomes: impl Iterator<Item = HandOutcome>) -> Self {
         Self(
             outcomes
@@ -94,6 +95,16 @@ impl Odds {
                 .collect(),
         )
     }
+
+    pub fn merge_unknown_players(mut self, n: usize) -> Self {
+        if self.0.len() - n <= 1 {
+            return self;
+        }
+        let unknown = self.0.split_off(n).into_iter();
+        let merged = unknown.reduce(HandOdds::merge).unwrap();
+        self.0.push(merged);
+        self
+    }
 }
 
 impl IntoIterator for Odds {
@@ -105,8 +116,15 @@ impl IntoIterator for Odds {
     }
 }
 
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Debug)]
+pub enum Player {
+    Single(u64),
+    Multiple(usize),
+}
+
+#[derive(Clone, Debug)]
 pub struct HandOdds {
+    pub who: Player,
     wins: u64,
     ties: u64,
     losses: u64,
@@ -114,6 +132,16 @@ pub struct HandOdds {
 }
 
 impl HandOdds {
+    pub fn new(id: u64) -> Self {
+        Self {
+            who: Player::Single(id),
+            wins: 0,
+            ties: 0,
+            losses: 0,
+            distribution: Default::default()
+        }
+    }
+
     pub fn update(mut self, outcome: HandOutcome) -> Self {
         match outcome.outcome {
             Outcome::Win => self.wins += 1,
@@ -125,6 +153,13 @@ impl HandOdds {
     }
 
     pub fn merge(mut self, other: HandOdds) -> Self {
+        self.who = match (self.who, other.who) {
+            (Player::Single(id1), Player::Single(id2)) if id1 == id2 => Player::Single(id1),
+            (Player::Single(_), Player::Single(_)) => Player::Multiple(2),
+            (Player::Multiple(n), Player::Single(_)) => Player::Multiple(n + 1),
+            (Player::Single(_), Player::Multiple(n)) => Player::Multiple(n + 1),
+            (Player::Multiple(n), Player::Multiple(m)) => Player::Multiple(n + m),
+        };
         self.wins += other.wins;
         self.ties += other.ties;
         self.losses += other.losses;

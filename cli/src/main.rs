@@ -1,7 +1,7 @@
 use fastrand::Rng;
 use git_version::git_version;
 use itertools::Itertools;
-use odd_engine::{Card, Game, GameOutcome, GameState, Outcome, HOLE_CARDS_PER_PLAYER};
+use odd_engine::{Card, Game, GameOutcome, GameState, Outcome, Player, HOLE_CARDS_PER_PLAYER};
 use structopt::StructOpt;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -12,7 +12,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(|x| x.try_into().unwrap())
         .collect_vec();
     for (i, player) in players.iter().enumerate() {
-        print!("player {} was dealt: ", i + 1);
+        print!("player {:2} was dealt: ", i + 1);
         for card in player {
             print!("{} ", card);
         }
@@ -36,6 +36,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let rng = Rng::with_seed(opt.seed);
     let rng = RngAdapter(rng);
+    let n_players = players.len();
     let game = Game::new(players, opt.board, opt.opponents);
     let GameOutcome {
         state,
@@ -51,7 +52,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     match state {
         GameState::GameOver(outcomes) => {
             for (i, outcome) in outcomes.into_iter().enumerate() {
-                print!("player {} has {} ", i + 1, outcome.hand);
+                print!("player {:2} has {} ", i + 1, outcome.hand);
                 match outcome.outcome {
                     Outcome::Win => print!("(winner)"),
                     Outcome::Tie => print!("(tie)"),
@@ -61,10 +62,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         GameState::Undecided(all_odds) => {
-            for (i, odds) in all_odds.into_iter().enumerate() {
+            for odds in all_odds
+                .merge_unknown_players(n_players)
+                .into_iter()
+            {
+                match odds.who {
+                    Player::Single(id) =>  print!("   player {:2}: ", id),
+                    Player::Multiple(count) => print!("{:2} opponents: ", count)
+                }
                 println!(
-                    "player {}: win {:5.2}%, tie {:5.2}%, loss {:5.2}%",
-                    i + 1,
+                    "win {:5.2}%, tie {:5.2}%, loss {:5.2}%",
                     odds.win_percent(),
                     odds.tie_percent(),
                     odds.loss_percent(),

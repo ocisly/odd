@@ -1,5 +1,5 @@
 use fastrand::Rng;
-use odd_engine::{Card, Game, GameOutcome, GameState, HandOutcome, Odds, HOLE_CARDS_PER_PLAYER};
+use odd_engine::{Card, Game, GameOutcome, GameState, HandOutcome, Odds, Player, HOLE_CARDS_PER_PLAYER};
 use serde_with::{serde_as, DisplayFromStr};
 use std::collections::HashMap;
 use std::env;
@@ -36,25 +36,37 @@ async fn evaluate(mut req: Request<()>) -> tide::Result<Body> {
         opponents,
     } = req.body_json().await?;
     let rng = RngAdapter(Rng::with_seed(1));
-    let game = Game::new(players, board, opponents.unwrap_or(0).min(8));
+    let n_opponents = opponents.unwrap_or(0).min(8);
+    let n_players = players.len();
+    let game = Game::new(players, board, n_opponents);
     let GameOutcome {
         state,
         cards_remaining,
     } = game.play(rng, iterations.unwrap_or(100_000).min(100_000))?;
     match state {
-        GameState::Undecided(odds) => format_odds(odds, cards_remaining),
+        GameState::Undecided(odds) => format_odds(odds, cards_remaining, n_players),
         GameState::GameOver(outcomes) => format_outcomes(outcomes, cards_remaining),
     }
 }
 
-fn format_odds(odds: Odds, cards_remaining: usize) -> tide::Result<Body> {
+fn format_odds(
+    odds: Odds,
+    cards_remaining: usize,
+    n_players: usize,
+) -> tide::Result<Body> {
     Body::from_json(&json!({
         "cards_remaining": cards_remaining,
-        "odds": odds.into_iter().map(|o| {
+        "odds": odds.merge_unknown_players(n_players).into_iter().map(|o| {
             let distribution = o.distribution()
                 .map(|(hand_type, value)| (hand_type.to_string(), format!("{:.2}%", value)))
                 .collect::<HashMap<_, _>>();
+
+            let (label, value) = match o.who {
+                Player::Single(id) => ("player", id),
+                Player::Multiple(count) => ("opponents", count as u64)
+            };
             json!({
+                label: value,
                 "win": format!("{:.2}%", o.win_percent()),
                 "loss": format!("{:.2}%",o.loss_percent()),
                 "tie": format!("{:.2}%",o.tie_percent()),
