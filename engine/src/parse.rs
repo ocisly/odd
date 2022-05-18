@@ -9,9 +9,15 @@ impl FromStr for Card {
     type Err = CardParseError;
 
     fn from_str(string: &str) -> Result<Card, CardParseError> {
-        let rank = string[0..1].parse()?;
-        let suit = string[1..2].parse()?;
-        Ok(Self { rank, suit })
+        match string.len() {
+            0 => Err(CardParseError::EmptyCard),
+            1 => Err(CardParseError::CardTooShort(string.into())),
+            2 => Ok(Self {
+                rank: string[0..1].parse()?,
+                suit: string[1..2].parse()?,
+            }),
+            _ => Err(CardParseError::CardTooLong(string.into())),
+        }
     }
 }
 
@@ -56,6 +62,9 @@ impl FromStr for Suit {
 pub enum CardParseError {
     InvalidSuit(String),
     InvalidRank(String),
+    EmptyCard,
+    CardTooShort(String),
+    CardTooLong(String),
 }
 
 impl Error for CardParseError {}
@@ -65,6 +74,9 @@ impl Display for CardParseError {
         match self {
             CardParseError::InvalidSuit(s) => write!(fmt, "unknown suit: {}", s),
             CardParseError::InvalidRank(s) => write!(fmt, "unknown rank: {}", s),
+            CardParseError::EmptyCard => write!(fmt, "empty card"),
+            CardParseError::CardTooShort(s) => write!(fmt, "too short: {}", s),
+            CardParseError::CardTooLong(s) => write!(fmt, "too long: {}", s),
         }
     }
 }
