@@ -5,8 +5,8 @@ edition = "2021"
 
 [dependencies]
 tide = "0.16.0"
-async-std = { version = "1.11.0", features = ["attributes"] }
-serde = { version = "1.0.137", features = ["derive"] }
+async-std = { version = "1.12.0", features = ["attributes"] }
+serde = { version = "1.0.142", features = ["derive"] }
 odd-engine = { path = "../engine" }
-serde_with = "1.13.0"
-fastrand = "1.7.0"
+serde_with = "2.0.0"
+fastrand = "1.8.0"
