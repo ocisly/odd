@@ -1,5 +1,7 @@
 use fastrand::Rng;
-use odd_engine::{Card, Game, GameOutcome, GameState, HandOutcome, Odds, Player, HOLE_CARDS_PER_PLAYER};
+use odd_engine::{
+    Card, Game, GameOutcome, GameState, HandOutcome, Odds, Player, HOLE_CARDS_PER_PLAYER,
+};
 use serde_with::{serde_as, DisplayFromStr};
 use std::collections::HashMap;
 use std::env;
@@ -10,7 +12,7 @@ use tide::{Body, Request};
 #[derive(Debug, Deserialize)]
 struct Input {
     #[serde_as(as = "Vec<[DisplayFromStr; HOLE_CARDS_PER_PLAYER]>")]
-    players: Vec<[Card; 2]>,
+    players: Vec<[Card; HOLE_CARDS_PER_PLAYER]>,
     #[serde_as(as = "Vec<DisplayFromStr>")]
     board: Vec<Card>,
     iterations: Option<usize>,
@@ -49,30 +51,36 @@ async fn evaluate(mut req: Request<()>) -> tide::Result<Body> {
     }
 }
 
-fn format_odds(
-    odds: Odds,
-    cards_remaining: usize,
-    n_players: usize,
-) -> tide::Result<Body> {
-    Body::from_json(&json!({
-        "cards_remaining": cards_remaining,
-        "odds": odds.merge_unknown_players(n_players).into_iter().map(|o| {
-            let distribution = o.distribution()
+fn format_odds(odds: Odds, cards_remaining: usize, n_players: usize) -> tide::Result<Body> {
+    let odds = odds
+        .merge_unknown_players(n_players)
+        .into_iter()
+        .map(|o| {
+            let distribution = o
+                .distribution()
                 .map(|(hand_type, value)| (hand_type.to_string(), format!("{:.2}%", value)))
                 .collect::<HashMap<_, _>>();
 
             let (label, value) = match o.who {
                 Player::Single(id) => ("player", id),
-                Player::Multiple(count) => ("opponents", count as u64)
+                Player::Multiple(count) => ("opponents", count as u64),
             };
+            let win = format!("{:.2}%", o.win_percent());
+            let loss = format!("{:.2}%", o.loss_percent());
+            let tie = format!("{:.2}%", o.tie_percent());
             json!({
                 label: value,
-                "win": format!("{:.2}%", o.win_percent()),
-                "loss": format!("{:.2}%",o.loss_percent()),
-                "tie": format!("{:.2}%",o.tie_percent()),
+                "win": win,
+                "loss": loss,
+                "tie": tie,
                 "distribution": distribution
-            }
-            )}).collect::<Vec<_>>()
+            })
+        })
+        .collect::<Vec<_>>();
+
+    Body::from_json(&json!({
+        "cards_remaining": cards_remaining,
+        "odds": odds,
     }))
 }
 
