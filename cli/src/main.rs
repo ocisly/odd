@@ -37,7 +37,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let rng = Rng::with_seed(opt.seed);
     let rng = RngAdapter(rng);
     let n_players = players.len();
-    let game = Game::new(players, opt.board, opt.opponents);
+    let game = Game::new(players, opt.board, opt.opponents, opt.folded);
     let GameOutcome {
         state,
         cards_remaining,
@@ -62,13 +62,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         GameState::Undecided(all_odds) => {
-            for odds in all_odds
-                .merge_unknown_players(n_players)
-                .into_iter()
-            {
+            for odds in all_odds.merge_unknown_players(n_players).into_iter() {
                 match odds.who {
-                    Player::Single(id) =>  print!("   player {:2}: ", id),
-                    Player::Multiple(count) => print!("{:2} opponents: ", count)
+                    Player::Single(id) => print!("   player {:2}: ", id),
+                    Player::Multiple(count) => print!("{:2} opponents: ", count),
                 }
                 println!(
                     "win {:5.2}%, tie {:5.2}%, loss {:5.2}%",
@@ -118,6 +115,10 @@ struct Opt {
     /// Number of additional players with unknown hole cards
     #[structopt(short, long, default_value = "0")]
     opponents: usize,
+
+    /// Number of additional players with unknown hole cards who have folded
+    #[structopt(short, long, default_value = "0")]
+    folded: usize,
 
     /// RNG seed used for generating permutations of the deck
     #[structopt(short, long, default_value = "1")]

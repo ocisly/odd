@@ -19,6 +19,7 @@ struct Input {
     board: Vec<Card>,
     iterations: Option<usize>,
     opponents: Option<usize>,
+    folded: Option<usize>,
 }
 
 #[async_std::main]
@@ -43,15 +44,17 @@ async fn evaluate(mut req: Request<()>) -> tide::Result<Body> {
         board,
         iterations,
         opponents,
+        folded,
     } = req.body_json().await?;
     let rng = RngAdapter(Rng::with_seed(1));
     let n_opponents = opponents.unwrap_or(0).min(8);
+    let n_folded = folded.unwrap_or(0).min(8 - n_opponents);
     let n_players = players.len();
-    let game = Game::new(players, board, n_opponents);
+    let game = Game::new(players, board, n_opponents, n_folded);
     let GameOutcome {
         state,
         cards_remaining,
-    } = game.play(rng, iterations.unwrap_or(100_000).min(100_000))?;
+    } = game.play(rng, iterations.unwrap_or(10_000).min(100_000))?;
     match state {
         GameState::Undecided(odds) => format_odds(odds, cards_remaining, n_players),
         GameState::GameOver(outcomes) => format_outcomes(outcomes, cards_remaining),

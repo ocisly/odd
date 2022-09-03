@@ -13,6 +13,7 @@ pub const BOARD_LENGTH: usize = 5;
 
 pub fn odds(
     opponents: usize,
+    n_folded: usize,
     players: &Players,
     board: &Cards,
     deck: Deck,
@@ -21,7 +22,7 @@ pub fn odds(
 ) -> Odds
 where
 {
-    let unknown_hole_cards = HOLE_CARDS_PER_PLAYER * opponents;
+    let unknown_hole_cards = HOLE_CARDS_PER_PLAYER * (opponents + n_folded);
     let unknown_board_cards = BOARD_LENGTH - board.len();
     let unknown_cards = unknown_hole_cards + unknown_board_cards;
     let new_odds = || Odds::new(opponents + players.len());
@@ -32,6 +33,7 @@ where
             let (extra_hole, extra_board) = scenario.split_at(unknown_hole_cards);
             let extra_players = extra_hole
                 .chunks_exact(HOLE_CARDS_PER_PLAYER)
+                .skip(n_folded)
                 .map(|x| x.try_into().unwrap())
                 .collect_vec();
 
@@ -70,6 +72,7 @@ pub enum Outcome {
     Loss,
 }
 
+#[derive(Debug)]
 pub struct Odds(Vec<HandOdds>);
 
 impl Odds {
@@ -138,7 +141,7 @@ impl HandOdds {
             wins: 0,
             ties: 0,
             losses: 0,
-            distribution: Default::default()
+            distribution: Default::default(),
         }
     }
 

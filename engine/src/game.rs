@@ -9,6 +9,7 @@ pub struct Game {
     players: Vec<HoleCards>,
     board: Vec<Card>,
     opponents: usize,
+    n_folded: usize,
 }
 
 pub enum GameState {
@@ -22,11 +23,17 @@ pub struct GameOutcome {
 }
 
 impl Game {
-    pub fn new(players: Vec<HoleCards>, board: Vec<Card>, opponents: usize) -> Self {
+    pub fn new(
+        players: Vec<HoleCards>,
+        board: Vec<Card>,
+        opponents: usize,
+        n_folded: usize,
+    ) -> Self {
         Game {
             players,
             board,
             opponents,
+            n_folded,
         }
     }
 
@@ -54,6 +61,7 @@ impl Game {
             GameOutcome {
                 state: GameState::Undecided(odds(
                     self.opponents,
+                    self.n_folded,
                     &self.players,
                     &self.board,
                     deck,
