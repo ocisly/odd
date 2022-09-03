@@ -5,7 +5,9 @@ use odd_engine::{
 use serde_with::{serde_as, DisplayFromStr};
 use std::collections::HashMap;
 use std::env;
+use tide::http::headers::HeaderValue;
 use tide::prelude::*;
+use tide::security::{CorsMiddleware, Origin};
 use tide::{Body, Request};
 
 #[serde_as]
@@ -25,6 +27,11 @@ async fn main() -> tide::Result<()> {
     let port = env::var("ODD_PORT")
         .map(|port| port.parse())
         .unwrap_or(Ok(8080))?;
+    let cors = CorsMiddleware::new()
+        .allow_methods("GET, POST, OPTIONS".parse::<HeaderValue>().unwrap())
+        .allow_origin(Origin::from("*"))
+        .allow_credentials(false);
+    app.with(cors);
     app.at("/evaluate").post(evaluate);
     app.listen(format!("localhost:{}", port)).await?;
     Ok(())
