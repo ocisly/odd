@@ -151,9 +151,9 @@ impl HandOdds {
 
     pub fn update(mut self, outcome: HandOutcome) -> Self {
         match outcome.outcome {
-            Outcome::Win => self.wins += 1,
-            Outcome::Tie => self.ties += 1,
-            Outcome::Loss => self.losses += 1,
+            Win => self.wins += 1,
+            Tie => self.ties += 1,
+            Loss => self.losses += 1,
         }
         *self.distribution.entry(outcome.hand.hand_type).or_insert(0) += 1;
         self
