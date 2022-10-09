@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 use fastrand::Rng;
 use git_version::git_version;
 use itertools::Itertools;

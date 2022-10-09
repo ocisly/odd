@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 use fastrand::Rng;
 use odd_engine::{
     Card, Game, GameOutcome, GameState, HandOutcome, Odds, Player, HOLE_CARDS_PER_PLAYER,

@@ -1,3 +1,4 @@
+#![forbid(unsafe_code)]
 mod calc;
 mod card;
 mod deck;
