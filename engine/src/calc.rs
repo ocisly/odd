@@ -50,12 +50,16 @@ pub fn outcomes(players: &Players, board: &Cards) -> impl Iterator<Item = HandOu
 }
 
 fn hand_outcomes(hands: Vec<Hand>) -> impl Iterator<Item = HandOutcome> {
-    let max = hands.iter().max().unwrap().clone();
-    let n_winners = hands.iter().filter(|x| **x == max).count();
+    let max = hands.iter().max().cloned();
+    let n_winners = hands.iter().filter(|x| Some(*x) == max.as_ref()).count();
     let win = if n_winners == 1 { Win } else { Tie };
 
     hands.into_iter().map(move |hand| HandOutcome {
-        outcome: if hand == max { win } else { Loss },
+        outcome: if Some(&hand) == max.as_ref() {
+            win
+        } else {
+            Loss
+        },
         hand,
     })
 }
