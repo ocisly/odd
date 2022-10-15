@@ -2,8 +2,12 @@
 use fastrand::Rng;
 use git_version::git_version;
 use itertools::Itertools;
+use mimalloc::MiMalloc;
 use odd_engine::{Card, Game, GameOutcome, GameState, Outcome, Player, HOLE_CARDS_PER_PLAYER};
 use structopt::StructOpt;
+
+#[global_allocator]
+static ALLOCATOR: MiMalloc = MiMalloc;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let opt = Opt::from_args();

@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 use fastrand::Rng;
+use mimalloc::MiMalloc;
 use odd_engine::{
     Card, Game, GameOutcome, GameState, HandOutcome, Odds, Player, HOLE_CARDS_PER_PLAYER,
 };
@@ -10,6 +11,9 @@ use tide::http::headers::HeaderValue;
 use tide::prelude::*;
 use tide::security::{CorsMiddleware, Origin};
 use tide::{Body, Request};
+
+#[global_allocator]
+static ALLOCATOR: MiMalloc = MiMalloc;
 
 #[serde_as]
 #[derive(Debug, Deserialize)]

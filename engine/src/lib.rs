@@ -8,6 +8,10 @@ mod game;
 mod hand;
 mod parse;
 
+#[cfg(test)]
+#[global_allocator]
+static ALLOCATOR: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 pub use calc::{odds, outcomes, HandOutcome, Odds, Outcome, Player, BOARD_LENGTH};
 pub use card::{Card, HOLE_CARDS_PER_PLAYER};
 pub use deck::Deck;
