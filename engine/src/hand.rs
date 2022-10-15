@@ -113,11 +113,11 @@ fn find_high_card(cards: &Cards) -> Hand {
 fn find_flush(cards: &Cards) -> Option<Hand> {
     let flush = cards
         .iter()
-        .copied()
-        .into_group_map_by(|c| c.suit)
+        .sorted_by_key(|c| c.suit as u8)
+        .group_by(|c| c.suit)
         .into_iter()
-        .find(|(_, v)| v.len() >= 5)?
-        .1;
+        .map(|(_, group)| group.copied().collect_vec())
+        .find(|v| v.len() >= Hand::HAND_SIZE)?;
     Some(Hand {
         hand_type: Flush,
         cards: flush[..Hand::HAND_SIZE].try_into().ok()?,
@@ -133,10 +133,10 @@ fn find_straight(cards: &Cards) -> Option<Hand> {
         .into_iter()
         .map(|(_, group)| group.map(|(_i, card)| *card).collect_vec())
         .find(|v| v.len() >= 4)?;
-    if let ace @ Card { rank: Ace, .. } = cards.first()? {
-        if let Card { rank: Deuce, .. } = straight.last()? {
-            straight.push(*ace);
-        }
+    if let (ace @ Card { rank: Ace, .. }, Card { rank: Deuce, .. }) =
+        (cards.first()?, straight.last()?)
+    {
+        straight.push(*ace);
     }
     straight.truncate(Hand::HAND_SIZE);
     Some(Hand {
