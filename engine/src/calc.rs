@@ -69,7 +69,7 @@ pub struct HandOutcome {
     pub hand: Hand,
 }
 
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Outcome {
     Win,
     Tie,
