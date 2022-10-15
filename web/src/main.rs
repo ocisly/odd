@@ -69,16 +69,16 @@ fn format_odds(odds: Odds, cards_remaining: usize, n_players: usize) -> tide::Re
         .map(|o| {
             let distribution = o
                 .distribution()
-                .map(|(hand_type, value)| (hand_type.to_string(), format!("{:.2}%", value)))
+                .map(|(hand_type, value)| (hand_type.to_string(), format!("{:05.2}%", value)))
                 .collect::<HashMap<_, _>>();
 
             let (label, value) = match o.who {
                 Player::Single(id) => ("player", id),
                 Player::Multiple(count) => ("opponents", count as u64),
             };
-            let win = format!("{:.2}%", o.win_percent());
-            let loss = format!("{:.2}%", o.loss_percent());
-            let tie = format!("{:.2}%", o.tie_percent());
+            let win = format!("{:05.2}%", o.win_percent());
+            let loss = format!("{:05.2}%", o.loss_percent());
+            let tie = format!("{:05.2}%", o.tie_percent());
             json!({
                 label: value,
                 "win": win,
