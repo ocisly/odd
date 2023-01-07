@@ -34,7 +34,7 @@ where
             let extra_players = extra_hole
                 .chunks_exact(HOLE_CARDS_PER_PLAYER)
                 .skip(n_folded)
-                .map(|x| x.try_into().unwrap())
+                .map(|cards| cards.try_into().unwrap())
                 .collect_vec();
 
             let all_players = [players, &extra_players].concat();
