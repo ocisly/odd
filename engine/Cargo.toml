@@ -5,8 +5,8 @@ edition = "2021"
 
 [dependencies]
 itertools = "0.10.5"
-rayon = "1.5.3"
+rayon = "1.6.1"
 
 [dev-dependencies]
 fastrand = "1.8.0"
-mimalloc = "0.1.30"
+mimalloc = "0.1.34"
