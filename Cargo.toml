@@ -7,3 +7,4 @@ members = [
     "cli",
     "web",
 ]
+resolver = "2"

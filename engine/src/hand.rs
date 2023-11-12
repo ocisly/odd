@@ -203,7 +203,7 @@ pub fn gen_straight_flushes() -> impl Iterator<Item = Vec<Card>> {
 #[cfg(test)]
 fn shuffled<T: Copy>(things: &[T]) -> impl Iterator<Item = T> + '_ {
     let mut things = things.to_owned();
-    let rng = fastrand::Rng::with_seed(1);
+    let mut rng = fastrand::Rng::with_seed(1);
     let n = things.len();
     // for i from 0 to n−2 do
     (0..n).map(move |i| {

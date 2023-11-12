@@ -4,9 +4,9 @@ version = "0.0.0"
 edition = "2021"
 
 [dependencies]
-fastrand = "1.8.0"
+fastrand = "2.0.1"
 git-version = "0.3.5"
-itertools = "0.10.5"
+itertools = "0.11.0"
 odd-engine = { path = "../engine" }
 structopt = "0.3.26"
-mimalloc = "0.1.34"
+mimalloc = "0.1.39"
