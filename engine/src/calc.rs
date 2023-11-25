@@ -7,6 +7,7 @@ use itertools::Itertools;
 use rayon::prelude::*;
 use std::cmp::Reverse;
 use std::collections::HashMap;
+use std::iter::zip;
 use Outcome::*;
 
 pub const BOARD_LENGTH: usize = 5;
@@ -28,7 +29,8 @@ where
     let new_odds = || Odds::new(opponents + players.len());
     permutations(unknown_cards, deck.consume().collect_vec(), rng)
         .take(desired_samples)
-        .par_bridge()
+        .collect_vec()
+        .into_par_iter()
         .map(|scenario| {
             let (extra_hole, extra_board) = scenario.split_at(unknown_hole_cards);
             let extra_players = extra_hole
@@ -86,8 +88,7 @@ impl Odds {
 
     fn update(self, outcomes: impl Iterator<Item = HandOutcome>) -> Self {
         Self(
-            outcomes
-                .zip(self.0)
+            zip(outcomes, self.0)
                 .map(|(outcome, odds)| odds.update(outcome))
                 .collect(),
         )
@@ -95,9 +96,7 @@ impl Odds {
 
     fn merge(self, other: Self) -> Self {
         Self(
-            self.0
-                .into_iter()
-                .zip(other.0)
+            zip(self.0, other.0)
                 .map(|(odds1, odds2)| odds1.merge(odds2))
                 .collect(),
         )
@@ -135,7 +134,29 @@ pub struct HandOdds {
     wins: u64,
     ties: u64,
     losses: u64,
-    distribution: HashMap<HandType, u64>,
+    distribution: HandTypeDistribution,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct HandTypeDistribution(HashMap<HandType, u64>);
+
+impl HandTypeDistribution {
+    pub fn update(mut self, hand_type: HandType) -> Self {
+        *self.0.entry(hand_type).or_insert(0) += 1;
+        self
+    }
+
+    pub fn merge(mut self, other: HandTypeDistribution) -> Self {
+        for (hand_type, count) in other.0 {
+            *self.0.entry(hand_type).or_insert(0) += count;
+        }
+        self
+    }
+
+    #[cfg(test)]
+    pub fn frequency_of(&self, hand_type: &HandType) -> u64 {
+        self.0[hand_type]
+    }
 }
 
 impl HandOdds {
@@ -155,7 +176,7 @@ impl HandOdds {
             Tie => self.ties += 1,
             Loss => self.losses += 1,
         }
-        *self.distribution.entry(outcome.hand.hand_type).or_insert(0) += 1;
+        self.distribution = self.distribution.update(outcome.hand.hand_type);
         self
     }
 
@@ -170,9 +191,7 @@ impl HandOdds {
         self.wins += other.wins;
         self.ties += other.ties;
         self.losses += other.losses;
-        for (hand_type, count) in other.distribution {
-            *self.distribution.entry(hand_type).or_insert(0) += count;
-        }
+        self.distribution = self.distribution.merge(other.distribution);
         self
     }
 
@@ -194,6 +213,7 @@ impl HandOdds {
 
     pub fn distribution(&self) -> impl Iterator<Item = (&HandType, f64)> {
         self.distribution
+            .0
             .iter()
             .sorted_by_key(|(_hand_type, count)| Reverse(**count))
             .map(|(hand_type, count)| (hand_type, 100f64 * (*count as f64 / self.all() as f64)))

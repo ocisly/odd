@@ -1,4 +1,6 @@
 #![forbid(unsafe_code)]
+use std::iter::zip;
+
 use fastrand::Rng;
 use git_version::git_version;
 use itertools::Itertools;
@@ -27,9 +29,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let flop = opt.board.get(..3);
     let turn = opt.board.get(3..4);
     let river = opt.board.get(4..);
-    let board = ["flop", "turn", "river"]
-        .into_iter()
-        .zip([flop, turn, river].into_iter().flatten());
+    let board = zip(
+        ["flop", "turn", "river"],
+        [flop, turn, river].into_iter().flatten(),
+    );
 
     for (name, cards) in board {
         print!("{}:", name);

@@ -3,6 +3,7 @@ use crate::card::{Card, Cards, Players};
 use crate::HOLE_CARDS_PER_PLAYER;
 use itertools::Itertools;
 use std::cmp::{Ordering, Reverse};
+use std::iter::zip;
 use HandType::*;
 
 pub fn hands(players: &Players, board: &Cards) -> Vec<Hand> {
@@ -13,8 +14,11 @@ pub fn hands(players: &Players, board: &Cards) -> Vec<Hand> {
 }
 
 pub fn hand(mut cards: Vec<Card>) -> Hand {
-    cards.sort_by_key(|x| Reverse(x.rank));
-    assert!(cards.iter().all_unique(), "bug: all cards must be unique");
+    cards.sort_unstable_by_key(|x| Reverse(x.rank));
+    assert!(
+        cards.iter().dedup_with_count().any(|(dupes, _)| dupes > 0),
+        "bug: all cards must be unique"
+    );
     assert!(
         cards.len() <= Hand::HAND_SIZE + HOLE_CARDS_PER_PLAYER,
         "bug: too many cards in hand"
@@ -119,7 +123,7 @@ fn find_high_card(cards: &Cards) -> Hand {
 fn find_flush(cards: &Cards) -> Option<Hand> {
     let flush = cards
         .iter()
-        .sorted_by_key(|c| c.suit as u8)
+        .sorted_unstable_by_key(|c| c.suit as u8)
         .group_by(|c| c.suit)
         .into_iter()
         .map(|(_, group)| group.copied().collect_vec())
@@ -167,8 +171,7 @@ pub fn gen_flushes() -> impl Iterator<Item = Vec<Card>> {
         })
         .flat_map(|ranks| {
             shuffled(&Suit::ALL).map(move |suit| {
-                repeat(suit)
-                    .zip(&ranks)
+                zip(repeat(suit), &ranks)
                     .map(|(suit, rank)| Card { suit, rank: *rank })
                     .collect()
             })
@@ -178,16 +181,21 @@ pub fn gen_flushes() -> impl Iterator<Item = Vec<Card>> {
 #[cfg(test)]
 pub fn gen_straights() -> impl Iterator<Item = Vec<Card>> {
     use crate::card::{Rank, Suit};
-    shuffled(&Suit::ALL)
+    Suit::ALL
+        .into_iter()
         .combinations_with_replacement(5)
-        .filter(move |suits| suits.iter().unique().count() >= 2)
+        // filter out flushes
+        .filter(move |suits| suits.iter().unique().count() > 1)
+        // consider all the unique orders (permutations) the suits could be in
+        .flat_map(move |suits| suits.into_iter().permutations(5).unique())
+        // now consider all the possible straights for that permutation of suits
         .flat_map(move |suits| {
             Rank::ALL_WITH_BOTH_ACES
+                // each straight is a sequence of 5 consecutive ranks
                 .windows(5)
                 .map(|window| window.to_owned())
                 .map(move |ranks| {
-                    shuffled(&ranks)
-                        .zip(&suits)
+                    zip(ranks, &suits)
                         .map(|(rank, suit)| Card { suit: *suit, rank })
                         .collect()
                 })
@@ -202,8 +210,7 @@ pub fn gen_straight_flushes() -> impl Iterator<Item = Vec<Card>> {
             .windows(5)
             .map(|window| window.to_owned())
             .map(move |ranks| {
-                shuffled(&ranks)
-                    .zip(std::iter::repeat(suit))
+                zip(shuffled(&ranks), std::iter::repeat(suit))
                     .map(|(rank, suit)| Card { suit, rank })
                     .collect()
             })
@@ -251,10 +258,7 @@ impl Ord for Hand {
     fn cmp(&self, other: &Self) -> Ordering {
         match (self.hand_type, other.hand_type) {
             (a, b) if a > b => Ordering::Greater,
-            (a, b) if a == b => self
-                .cards
-                .iter()
-                .zip(&other.cards)
+            (a, b) if a == b => zip(self.cards, &other.cards)
                 .map(|(card1, card2)| card1.rank.cmp(&card2.rank))
                 .find(|c| *c != Ordering::Equal)
                 .unwrap_or(Ordering::Equal),
@@ -279,8 +283,11 @@ pub enum HandType {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::card::Suit::*;
-    use crate::card::{Rank, Suit};
+    use crate::{
+        calc::HandTypeDistribution,
+        card::{Rank, Suit},
+        Deck,
+    };
     use std::iter::repeat;
 
     fn parse_card(raw: &str) -> Card {
@@ -289,6 +296,32 @@ mod tests {
 
     fn parse_cards(raw: &str) -> Vec<Card> {
         raw.split(' ').map(parse_card).collect()
+    }
+
+    #[test]
+    fn test_handles_all_valid_hands() {
+        use rayon::prelude::*;
+
+        let new_dist = || HandTypeDistribution::default();
+
+        let distribution = Deck::default()
+            .consume()
+            .combinations(7)
+            .collect_vec()
+            .into_par_iter()
+            .map(|cards| hand(cards).hand_type)
+            .fold(new_dist, HandTypeDistribution::update)
+            .reduce(new_dist, HandTypeDistribution::merge);
+
+        assert_eq!(00_041_584, distribution.frequency_of(&StraightFlush));
+        assert_eq!(00_224_848, distribution.frequency_of(&FourOfAKind));
+        assert_eq!(03_473_184, distribution.frequency_of(&FullHouse));
+        assert_eq!(04_047_644, distribution.frequency_of(&Flush));
+        assert_eq!(06_180_020, distribution.frequency_of(&Straight));
+        assert_eq!(06_461_620, distribution.frequency_of(&ThreeOfAKind));
+        assert_eq!(31_433_400, distribution.frequency_of(&TwoPair));
+        assert_eq!(58_627_800, distribution.frequency_of(&Pair));
+        assert_eq!(23_294_460, distribution.frequency_of(&HighCard));
     }
 
     #[test]
@@ -301,48 +334,67 @@ mod tests {
 
     #[test]
     fn test_pair() {
+        let mut n = 0;
         for rank in Rank::ALL.iter().copied() {
             for (suit1, suit2) in Suit::ALL.iter().copied().tuple_combinations() {
                 let card1 = Card { rank, suit: suit1 };
                 let card2 = Card { rank, suit: suit2 };
-                let kicker_ranks = Rank::ALL.iter().copied().filter(|x| *x != rank).take(3);
-                let kickers = kicker_ranks
-                    .zip(repeat(Hearts))
-                    .map(|(rank, suit)| Card { rank, suit });
-                let result = hand(kickers.chain(vec![card1, card2]).collect());
-                assert_eq!(result.hand_type, Pair);
+                for kicker_ranks in Rank::ALL
+                    .iter()
+                    .copied()
+                    .filter(|x| *x != rank)
+                    .combinations(3)
+                {
+                    for kicker_suits in Suit::ALL
+                        .into_iter()
+                        .combinations_with_replacement(3)
+                        .flat_map(|s| s.into_iter().permutations(3).unique())
+                    {
+                        let kickers = zip(kicker_ranks.clone(), kicker_suits)
+                            .map(|(rank, suit)| Card { rank, suit });
+                        let result = hand(kickers.chain(vec![card1, card2]).collect());
+                        assert_eq!(result.hand_type, Pair);
+                        n += 1;
+                    }
+                }
             }
         }
+        assert_eq!(1_098_240, n);
     }
 
     #[test]
     fn test_two_pair() {
-        for (rank1, rank2, rank3) in Rank::ALL.iter().copied().tuple_combinations() {
-            for (suit1, suit2, suit3) in Suit::ALL.iter().copied().tuple_combinations() {
-                let card1 = Card {
-                    rank: rank1,
-                    suit: suit1,
-                };
-                let card2 = Card {
-                    rank: rank1,
-                    suit: suit2,
-                };
-                let card3 = Card {
-                    rank: rank2,
-                    suit: suit1,
-                };
-                let card4 = Card {
-                    rank: rank2,
-                    suit: suit2,
-                };
-                let card5 = Card {
-                    rank: rank3,
-                    suit: suit3,
-                };
-                let result = hand(vec![card1, card2, card3, card4, card5]);
-                assert_eq!(result.hand_type, TwoPair);
+        let mut n = 0;
+        for (rank1, rank2) in Rank::ALL.into_iter().tuple_combinations() {
+            for suits1 in Suit::ALL.into_iter().combinations(2) {
+                for suits2 in Suit::ALL.into_iter().combinations(2) {
+                    for kicker_rank in Rank::ALL
+                        .into_iter()
+                        .filter(|kicker_rank| *kicker_rank != rank1 && *kicker_rank != rank2)
+                    {
+                        for kicker_suit in Suit::ALL {
+                            let mut cards = zip(
+                                vec![rank1, rank1, rank2, rank2],
+                                vec![suits1.clone(), suits2.clone()].into_iter().flatten(),
+                            )
+                            .map(|(rank, suit)| Card { rank, suit })
+                            .collect_vec();
+                            let kicker = Card {
+                                rank: kicker_rank,
+                                suit: kicker_suit,
+                            };
+                            cards.push(kicker);
+
+                            let result = hand(cards);
+                            assert_eq!(result.hand_type, TwoPair);
+
+                            n += 1;
+                        }
+                    }
+                }
             }
         }
+        assert_eq!(123_552, n);
     }
 
     #[test]
@@ -355,34 +407,47 @@ mod tests {
 
     #[test]
     fn test_three() {
+        let mut n = 0;
         for rank in Rank::ALL.iter().copied() {
             for suits in Suit::ALL.iter().copied().combinations(3) {
-                let kicker_ranks = Rank::ALL.iter().copied().filter(|x| *x != rank).take(2);
-                let cards = suits
-                    .into_iter()
-                    .zip(repeat(rank))
-                    .map(|(suit, rank)| Card { suit, rank });
+                for kicker_ranks in Rank::ALL
+                    .iter()
+                    .copied()
+                    .filter(|kicker_rank| *kicker_rank != rank)
+                    .combinations(2)
+                {
+                    for kicker_suits in Suit::ALL
+                        .iter()
+                        .copied()
+                        .combinations_with_replacement(2)
+                        .flat_map(|combos| combos.into_iter().permutations(2))
+                        .unique()
+                    {
+                        let cards = zip(suits.clone(), repeat(rank))
+                            .map(|(suit, rank)| Card { suit, rank });
+                        let kickers = zip(kicker_ranks.clone(), kicker_suits)
+                            .map(|(rank, suit)| Card { rank, suit });
 
-                let kickers = kicker_ranks.map(|kicker_rank| Card {
-                    suit: Hearts,
-                    rank: kicker_rank,
-                });
+                        let result = hand(cards.chain(kickers.into_iter()).collect());
+                        assert_eq!(result.hand_type, ThreeOfAKind);
 
-                let result = hand(cards.chain(kickers).collect());
-                assert_eq!(result.hand_type, ThreeOfAKind);
+                        n += 1;
+                    }
+                }
             }
         }
+        assert_eq!(54_912, n);
     }
 
     #[test]
     fn test_straight() {
-        // let mut n = 0;
+        let mut n = 0;
         for cards in gen_straights() {
             let result = hand(cards);
-            // n += 1;
+            n += 1;
             assert_eq!(result.hand_type, Straight, "{:#?}", result);
         }
-        // assert_eq!(10_200, n);
+        assert_eq!(10_200, n);
     }
 
     #[test]
@@ -444,10 +509,10 @@ mod tests {
         for ranks in Rank::ALL.iter().copied().permutations(2) {
             let (rank1, rank2) = ranks.into_iter().collect_tuple().unwrap();
             for suits1 in Suit::ALL.iter().copied().combinations(3) {
-                let cards1: Vec<_> = suits1.into_iter().zip(repeat(rank1)).collect();
+                let cards1: Vec<_> = zip(suits1, repeat(rank1)).collect();
 
                 for suits2 in Suit::ALL.iter().copied().combinations(2) {
-                    let cards2 = suits2.into_iter().zip(repeat(rank2));
+                    let cards2 = zip(suits2, repeat(rank2));
 
                     let result = hand(
                         cards1
@@ -480,10 +545,7 @@ mod tests {
         for ranks in Rank::ALL.iter().copied().permutations(2) {
             let (rank, kicker_rank) = ranks.into_iter().collect_tuple().unwrap();
             for kicker_suit in Suit::ALL {
-                let cards = Suit::ALL
-                    .iter()
-                    .zip(repeat(rank))
-                    .map(|(suit, rank)| Card { suit: *suit, rank });
+                let cards = zip(Suit::ALL, repeat(rank)).map(|(suit, rank)| Card { suit, rank });
                 let kicker = Card {
                     suit: kicker_suit,
                     rank: kicker_rank,
