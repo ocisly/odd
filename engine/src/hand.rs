@@ -1,5 +1,6 @@
 use crate::card::Rank::*;
 use crate::card::{Card, Cards, Players};
+use crate::HOLE_CARDS_PER_PLAYER;
 use itertools::Itertools;
 use std::cmp::{Ordering, Reverse};
 use HandType::*;
@@ -13,6 +14,11 @@ pub fn hands(players: &Players, board: &Cards) -> Vec<Hand> {
 
 pub fn hand(mut cards: Vec<Card>) -> Hand {
     cards.sort_by_key(|x| Reverse(x.rank));
+    assert!(cards.iter().all_unique(), "bug: all cards must be unique");
+    assert!(
+        cards.len() <= Hand::HAND_SIZE + HOLE_CARDS_PER_PLAYER,
+        "bug: too many cards in hand"
+    );
     let flush = find_flush(&cards);
     [
         find_straight_flush(&flush, &cards),
@@ -150,10 +156,14 @@ pub fn gen_flushes() -> impl Iterator<Item = Vec<Card>> {
     use crate::card::{Rank, Suit};
     use std::iter::repeat;
     shuffled(&Rank::ALL)
-        .combinations_with_replacement(5)
+        .combinations(5)
         .filter(|ranks| {
-            let uniques = ranks.iter().unique().count();
-            uniques >= 3
+            let deuce = ranks.contains(&Deuce);
+            !ranks
+                .iter()
+                .sorted()
+                .tuple_windows()
+                .all(|(x, y)| (deuce && y == &Ace) || (*y as u8) - (*x as u8) == 1)
         })
         .flat_map(|ranks| {
             shuffled(&Suit::ALL).map(move |suit| {
@@ -337,7 +347,7 @@ mod tests {
 
     #[test]
     fn test_two_pair_tricky() {
-        let cards = parse_cards("Qh Qd Jh Jd 6d 6d");
+        let cards = parse_cards("Qh Qd Jh Jd 6d 6c");
         let result = hand(cards);
         assert_eq!(result.hand_type, TwoPair);
         assert_eq!(result.cards.to_vec(), parse_cards("Qh Qd Jh Jd 6d"));
@@ -366,10 +376,13 @@ mod tests {
 
     #[test]
     fn test_straight() {
+        // let mut n = 0;
         for cards in gen_straights() {
             let result = hand(cards);
+            // n += 1;
             assert_eq!(result.hand_type, Straight, "{:#?}", result);
         }
+        // assert_eq!(10_200, n);
     }
 
     #[test]
@@ -398,21 +411,24 @@ mod tests {
 
     #[test]
     fn test_flush() {
+        let mut n = 0;
         for cards in gen_flushes() {
             let result = hand(cards);
-            if result.hand_type == StraightFlush {
-                continue;
-            }
+            n += 1;
             assert_eq!(result.hand_type, Flush, "{:#?}", result);
         }
+        assert_eq!(5108, n, "didn't generate all flushes");
     }
 
     #[test]
     fn test_straight_flush() {
+        let mut n = 0;
         for cards in gen_straight_flushes() {
             let result = hand(cards);
+            n += 1;
             assert_eq!(result.hand_type, StraightFlush, "{:#?}", result);
         }
+        assert_eq!(40, n, "didn't generate all straight flushes");
     }
 
     #[test]
@@ -424,7 +440,9 @@ mod tests {
 
     #[test]
     fn test_full_house() {
-        for (rank1, rank2) in Rank::ALL.iter().copied().tuple_combinations() {
+        let mut n = 0;
+        for ranks in Rank::ALL.iter().copied().permutations(2) {
+            let (rank1, rank2) = ranks.into_iter().collect_tuple().unwrap();
             for suits1 in Suit::ALL.iter().copied().combinations(3) {
                 let cards1: Vec<_> = suits1.into_iter().zip(repeat(rank1)).collect();
 
@@ -439,10 +457,13 @@ mod tests {
                             .map(|(suit, rank)| Card { suit, rank })
                             .collect(),
                     );
+
+                    n += 1;
                     assert_eq!(result.hand_type, FullHouse);
                 }
             }
         }
+        assert_eq!(3744, n, "didn't generate all full houses");
     }
 
     #[test]
@@ -455,19 +476,23 @@ mod tests {
 
     #[test]
     fn test_four() {
-        for rank in Rank::ALL.iter().copied() {
-            let cards = Suit::ALL
-                .iter()
-                .copied()
-                .zip(repeat(rank))
-                .map(|(suit, rank)| Card { suit, rank });
-            let kicker_rank = Rank::ALL.iter().copied().find(|r| *r != rank).unwrap();
-            let kicker = Card {
-                suit: Hearts,
-                rank: kicker_rank,
-            };
-            let result = hand(std::iter::once(kicker).chain(cards).collect());
-            assert_eq!(result.hand_type, FourOfAKind);
+        let mut n = 0;
+        for ranks in Rank::ALL.iter().copied().permutations(2) {
+            let (rank, kicker_rank) = ranks.into_iter().collect_tuple().unwrap();
+            for kicker_suit in Suit::ALL {
+                let cards = Suit::ALL
+                    .iter()
+                    .zip(repeat(rank))
+                    .map(|(suit, rank)| Card { suit: *suit, rank });
+                let kicker = Card {
+                    suit: kicker_suit,
+                    rank: kicker_rank,
+                };
+                let result = hand(std::iter::once(kicker).chain(cards).collect());
+                n += 1;
+                assert_eq!(result.hand_type, FourOfAKind);
+            }
         }
+        assert_eq!(624, n, "didn't generate all quads");
     }
 }

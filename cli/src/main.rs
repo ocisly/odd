@@ -79,12 +79,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     odds.loss_percent(),
                 );
                 if !opt.distribution {
-                    continue;
+                    for (hand_type, percent) in odds.distribution() {
+                        println!("{:20}: {:5.2}%", *hand_type, percent);
+                    }
+                    println!();
                 }
-                for (hand_type, percent) in odds.distribution() {
-                    println!("{:20}: {:5.2}%", *hand_type, percent);
-                }
-                println!();
             }
         }
     }
