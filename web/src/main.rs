@@ -59,7 +59,7 @@ async fn evaluate(mut req: Request<()>) -> tide::Result<Body> {
     let GameOutcome {
         state,
         cards_remaining,
-    } = game.play(rng, iterations.unwrap_or(10_000).min(100_000))?;
+    } = game.play(rng, iterations.unwrap_or(100_000).min(1_000_000))?;
     match state {
         GameState::Undecided(odds) => format_odds(odds, cards_remaining, n_players),
         GameState::GameOver(outcomes) => format_outcomes(outcomes, cards_remaining),
@@ -73,16 +73,16 @@ fn format_odds(odds: Odds, cards_remaining: usize, n_players: usize) -> tide::Re
         .map(|o| {
             let distribution = o
                 .distribution()
-                .map(|(hand_type, value)| (hand_type.to_string(), format!("{:05.2}%", value)))
+                .map(|(hand_type, value)| (hand_type.to_string(), value))
                 .collect::<HashMap<_, _>>();
 
             let (label, value) = match o.who {
                 Player::Single(id) => ("player", id),
                 Player::Multiple(count) => ("opponents", count as u64),
             };
-            let win = format!("{:05.2}%", o.win_percent());
-            let loss = format!("{:05.2}%", o.loss_percent());
-            let tie = format!("{:05.2}%", o.tie_percent());
+            let win = o.win_percent();
+            let loss = o.loss_percent();
+            let tie = o.tie_percent();
             json!({
                 label: value,
                 "win": win,
