@@ -335,13 +335,12 @@ mod tests {
     #[test]
     fn test_pair() {
         let mut n = 0;
-        for rank in Rank::ALL.iter().copied() {
-            for (suit1, suit2) in Suit::ALL.iter().copied().tuple_combinations() {
+        for rank in Rank::ALL.into_iter() {
+            for (suit1, suit2) in Suit::ALL.into_iter().tuple_combinations() {
                 let card1 = Card { rank, suit: suit1 };
                 let card2 = Card { rank, suit: suit2 };
                 for kicker_ranks in Rank::ALL
-                    .iter()
-                    .copied()
+                    .into_iter()
                     .filter(|x| *x != rank)
                     .combinations(3)
                 {
@@ -408,17 +407,15 @@ mod tests {
     #[test]
     fn test_three() {
         let mut n = 0;
-        for rank in Rank::ALL.iter().copied() {
-            for suits in Suit::ALL.iter().copied().combinations(3) {
+        for rank in Rank::ALL.into_iter() {
+            for suits in Suit::ALL.into_iter().combinations(3) {
                 for kicker_ranks in Rank::ALL
-                    .iter()
-                    .copied()
+                    .into_iter()
                     .filter(|kicker_rank| *kicker_rank != rank)
                     .combinations(2)
                 {
                     for kicker_suits in Suit::ALL
-                        .iter()
-                        .copied()
+                        .into_iter()
                         .combinations_with_replacement(2)
                         .flat_map(|combos| combos.into_iter().permutations(2))
                         .unique()
@@ -506,12 +503,12 @@ mod tests {
     #[test]
     fn test_full_house() {
         let mut n = 0;
-        for ranks in Rank::ALL.iter().copied().permutations(2) {
+        for ranks in Rank::ALL.into_iter().permutations(2) {
             let (rank1, rank2) = ranks.into_iter().collect_tuple().unwrap();
-            for suits1 in Suit::ALL.iter().copied().combinations(3) {
-                let cards1: Vec<_> = zip(suits1, repeat(rank1)).collect();
+            for suits1 in Suit::ALL.into_iter().combinations(3) {
+                let cards1 = zip(suits1, repeat(rank1)).collect_vec();
 
-                for suits2 in Suit::ALL.iter().copied().combinations(2) {
+                for suits2 in Suit::ALL.into_iter().combinations(2) {
                     let cards2 = zip(suits2, repeat(rank2));
 
                     let result = hand(
@@ -542,7 +539,7 @@ mod tests {
     #[test]
     fn test_four() {
         let mut n = 0;
-        for ranks in Rank::ALL.iter().copied().permutations(2) {
+        for ranks in Rank::ALL.into_iter().permutations(2) {
             let (rank, kicker_rank) = ranks.into_iter().collect_tuple().unwrap();
             for kicker_suit in Suit::ALL {
                 let cards = zip(Suit::ALL, repeat(rank)).map(|(suit, rank)| Card { suit, rank });
