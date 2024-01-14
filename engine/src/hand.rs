@@ -302,7 +302,7 @@ mod tests {
     fn test_handles_all_valid_hands() {
         use rayon::prelude::*;
 
-        let new_dist = || HandTypeDistribution::default();
+        let new_dist = HandTypeDistribution::default;
 
         let distribution = Deck::default()
             .consume()
@@ -313,12 +313,12 @@ mod tests {
             .fold(new_dist, HandTypeDistribution::update)
             .reduce(new_dist, HandTypeDistribution::merge);
 
-        assert_eq!(00_041_584, distribution.frequency_of(&StraightFlush));
-        assert_eq!(00_224_848, distribution.frequency_of(&FourOfAKind));
-        assert_eq!(03_473_184, distribution.frequency_of(&FullHouse));
-        assert_eq!(04_047_644, distribution.frequency_of(&Flush));
-        assert_eq!(06_180_020, distribution.frequency_of(&Straight));
-        assert_eq!(06_461_620, distribution.frequency_of(&ThreeOfAKind));
+        assert_eq!(41_584, distribution.frequency_of(&StraightFlush));
+        assert_eq!(224_848, distribution.frequency_of(&FourOfAKind));
+        assert_eq!(3_473_184, distribution.frequency_of(&FullHouse));
+        assert_eq!(4_047_644, distribution.frequency_of(&Flush));
+        assert_eq!(6_180_020, distribution.frequency_of(&Straight));
+        assert_eq!(6_461_620, distribution.frequency_of(&ThreeOfAKind));
         assert_eq!(31_433_400, distribution.frequency_of(&TwoPair));
         assert_eq!(58_627_800, distribution.frequency_of(&Pair));
         assert_eq!(23_294_460, distribution.frequency_of(&HighCard));
@@ -339,11 +339,7 @@ mod tests {
             for (suit1, suit2) in Suit::ALL.into_iter().tuple_combinations() {
                 let card1 = Card { rank, suit: suit1 };
                 let card2 = Card { rank, suit: suit2 };
-                for kicker_ranks in Rank::ALL
-                    .into_iter()
-                    .filter(|x| *x != rank)
-                    .combinations(3)
-                {
+                for kicker_ranks in Rank::ALL.into_iter().filter(|x| *x != rank).combinations(3) {
                     for kicker_suits in Suit::ALL
                         .into_iter()
                         .combinations_with_replacement(3)
