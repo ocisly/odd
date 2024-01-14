@@ -83,7 +83,7 @@ pub struct Odds(Vec<HandOdds>);
 
 impl Odds {
     fn new(num_players: usize) -> Self {
-        Self((1..=num_players as u64).map(HandOdds::new).collect())
+        Self((0..num_players as u64).map(HandOdds::new).collect())
     }
 
     fn update(self, outcomes: impl Iterator<Item = HandOutcome>) -> Self {
